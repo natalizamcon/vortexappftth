@@ -14,7 +14,7 @@ import Finanzas from "./pages/Finanzas";
 import Usuarios from "./pages/Usuarios";
 
 const RUTAS: [string, string, string[] | null][] = [
-  ["dashboard", "Dashboard", null], ["zonas", "Proyectos y zonas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
+  ["dashboard", "Dashboard", null], ["zonas", "Zonas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
   ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["usuarios", "Usuarios", ["admin"]],
 ];
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
@@ -38,7 +38,7 @@ export default function App() {
   return <>
     <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k ? "on" : ""}>{l}</a>)}</nav></div></header>
     <div className="barra">
-      <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los proyectos" : "Todos mis proyectos"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
+      {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los espacios" : "Todos mis espacios"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
       <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
       <span className="mute" style={{ marginLeft: "auto" }}>{perfil.nombre || perfil.email} · {perfil.rol}</span><button className="btn suave chico" onClick={salir}>Salir</button>
     </div>

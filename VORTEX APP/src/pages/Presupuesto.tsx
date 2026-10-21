@@ -93,7 +93,7 @@ export function Simulador() {
     setMsg(""); setOk(""); setOcup(true);
     try {
       if (!s.nombre.trim()) throw new Error("Escribe un nombre para la simulación.");
-      if (!pid) throw new Error("Elige un proyecto arriba.");
+      if (!pid) throw new Error("Primero crea una zona en el menú Zonas.");
       if (cargado) {
         const { error } = await supabase.from("simulaciones").update({ nombre: s.nombre, datos: s, zona_id: zonaId || null }).eq("id", cargado.id);
         if (error) throw new Error(error.message);

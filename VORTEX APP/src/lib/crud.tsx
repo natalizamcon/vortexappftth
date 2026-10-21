@@ -22,7 +22,7 @@ export default function Crud({ titulo, tabla, campos, columnas, conZona, orden =
       const zona = zonas.find(z => z.id === zonaId);
       const pid = zona?.proyecto_id || proyectoId || (proyectos.length === 1 ? proyectos[0].id : "");
       if (conZona === true && !zonaId) throw new Error("Elige una zona arriba.");
-      if (!pid) throw new Error("Elige un proyecto arriba.");
+      if (!pid) throw new Error("Primero crea una zona en el menú Zonas.");
       const fila: any = {};
       for (const c of campos) {
         let x = v[c.k];

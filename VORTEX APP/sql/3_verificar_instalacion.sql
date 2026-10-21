@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 10 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 11 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -46,4 +46,10 @@ select n, comprobacion, resultado, estado from (
   select 10, 'Simulador y presupuesto (2 tablas, archivo 4)',
          (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('simulaciones','presupuesto_lineas'))::text,
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('simulaciones','presupuesto_lineas')) = 2 then 'OK' else 'FALTA: ejecuta 4_simulador_presupuesto.sql' end
+  union all
+  select 11, 'Crear zona paso a paso y socios por zona (archivo 5)',
+         ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_zona_completa','dar_acceso_zona'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios'))::text,
+         case when ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_zona_completa','dar_acceso_zona'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios')) = 3 then 'OK' else 'FALTA: ejecuta 5_zonas_y_socios.sql' end
 ) r order by n;

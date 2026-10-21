@@ -1,0 +1,42 @@
+:root{--bg:#f4f2fb;--panel:#fff;--ink:#10142c;--mute:#5c6280;--line:#dfdcf0;--acc:#08bfc5;--acct:#067e86;--lil:#7928ca;--lilb:#efe4fb;--ok:#1a8f5a;--okb:#dcf3e8;--warn:#9a6f0a;--warnb:#fbf0d2;--late:#c4631a;--lateb:#fbe5d2;--bad:#c23535;--badb:#f9dcdc}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.45 "Montserrat",system-ui,sans-serif;padding-top:env(safe-area-inset-top)}
+h1,h2,h3{margin:0 0 10px}h1{font-size:22px}h2{font-size:16px}
+.mute{color:var(--mute)}.vacio{padding:10px 0}.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.entre{justify-content:space-between}
+.topnav{background:linear-gradient(90deg,#e6d8fb,#d3f4f6);border-bottom:1px solid #cdbff0;padding:8px 16px;position:sticky;top:0;z-index:20}
+.topnav .fila{flex-wrap:wrap}.topnav img{height:44px}
+.nav{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.nav a{color:var(--ink);text-decoration:none;padding:6px 11px;border-radius:6px;font-weight:500;font-size:13px;white-space:nowrap}
+.nav a:hover{background:#ffffff99}.nav a.on{background:var(--acc);font-weight:600}
+.barra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px}
+main{padding:6px 16px 40px;max-width:1500px;margin:0 auto}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.btn{background:var(--acc);color:var(--ink);border:0;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.suave{background:var(--panel);border:1px solid var(--line);font-weight:500}.btn.mor{background:var(--lil);color:#fff}.btn.rojo{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}.btn.chico{padding:4px 9px;font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}.gk{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.kpi{border-top:3px solid var(--lil);margin:0}.kpi span{display:block;color:var(--mute)}.kpi b{display:block;font-size:24px;margin:2px 0}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:560px}th{text-align:left;color:var(--mute);font-weight:500;padding:8px;border-bottom:1px solid var(--line);font-size:12.5px}td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--lilb);color:var(--lil)}
+.e-PAGADO,.e-ACTIVO,.e-LIBRE,.e-COMPLETADA,.e-FINALIZADO,.e-ALMACEN{background:var(--okb);color:var(--ok)}
+.e-POR_VENCER,.e-PENDIENTE,.e-RESERVADO,.e-PAUSADO,.e-PROGRAMADO{background:var(--warnb);color:var(--warn)}
+.e-VENCIDO,.e-EN_PROCESO,.e-EN_EJECUCION{background:var(--lateb);color:var(--late)}
+.e-SUSPENDIDO,.e-DA_ADO,.e-DAÑADO{background:var(--badb);color:var(--bad)}.e-BAJA,.e-CANCELADA,.e-CANCELADO,.e-DESCARTE{background:#e4e5ea;color:#333}
+.e-OCUPADO{background:var(--lil);color:#fff}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:0;background:none;color:var(--mute);padding:8px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--acc)}
+.campo{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}.campo span{color:var(--mute);font-size:12.5px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 12px}
+.aviso{border-radius:8px;padding:10px 12px;margin-bottom:12px;background:#d9f6f7}.aviso.mal{background:var(--badb);color:var(--bad)}.aviso.ok{background:var(--okb);color:var(--ok)}
+.modal-fondo{position:fixed;inset:0;background:#10142c99;z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 10px}
+.modal{background:var(--panel);border-radius:10px;padding:16px;width:100%}
+.barra-bar{height:12px;background:var(--bg);border-radius:6px;overflow:hidden;display:flex}.barra-bar i{display:block;height:100%}
+.puertos{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;max-width:620px}
+.puerto{aspect-ratio:1;border-radius:50%;border:2px solid;display:grid;place-items:center;font-weight:600;cursor:pointer;background:var(--panel)}
+.puerto.LIBRE{border-color:var(--ok);color:var(--ok)}.puerto.OCUPADO{background:var(--lil);border-color:var(--lil);color:#fff}.puerto.RESERVADO{border-color:var(--warn);color:var(--warn);border-style:dashed}.puerto.DAÑADO{background:var(--bad);border-color:var(--bad);color:#fff}
+.login{max-width:400px;margin:8vh auto;padding:0 14px}.login img{width:100%;max-width:300px;display:block;margin:0 auto 18px}
+@media(max-width:700px){main{padding:4px 10px 40px}.nav a{padding:6px 8px}.barra select{max-width:48%}}

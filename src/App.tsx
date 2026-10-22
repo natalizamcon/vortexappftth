@@ -12,10 +12,11 @@ import Campo from "./pages/Campo";
 import Inventario from "./pages/Inventario";
 import Finanzas from "./pages/Finanzas";
 import Usuarios from "./pages/Usuarios";
+import Papelera from "./pages/Papelera";
 
 const RUTAS: [string, string, string[] | null][] = [
   ["dashboard", "Dashboard", null], ["zonas", "Zonas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
-  ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["usuarios", "Usuarios", ["admin"]],
+  ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["usuarios", "Usuarios", ["admin"]], ["papelera", "Papelera", ["admin"]],
 ];
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
@@ -31,7 +32,7 @@ export default function App() {
   const pagina = () => {
     switch (ruta) {
       case "zonas": return <Zonas />; case "clientes": return <Clientes />; case "cobranzas": return <Cobranzas />; case "red": return <Red />;
-      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "usuarios": return <Usuarios />;
+      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "usuarios": return <Usuarios />; case "papelera": return <Papelera />;
       default: return <Dashboard />;
     }
   };

@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Kpi, Vacio, bs, hoy, sumar, useProyecto, useQuery } from "../lib/ui";
 import Crud from "../lib/crud";
+import { aPapelera } from "../lib/papelera";
 
 const n = (x: any) => Number(x) || 0;
 const DIAS_POR_UNIDAD: Record<string, number> = { dias: 1, semanas: 6, meses: 26 }; // días de trabajo
@@ -125,14 +126,14 @@ export function Simulador() {
       const ins = await supabase.from("presupuesto_lineas").insert(lineas);
       if (ins.error) throw new Error(ins.error.message);
       const ids = (viejas.data || []).map((x: any) => x.id);
-      if (ids.length) { const del = await supabase.from("presupuesto_lineas").delete().in("id", ids); if (del.error) throw new Error(del.error.message); }
+      if (ids.length) await aPapelera("presupuesto_lineas", ids, "Reemplazada al volver a cargar la simulación");
       setOk(`Listo: ${lineas.length} líneas cargadas al presupuesto de ${zona.nombre}. Míralas en la pestaña "Presupuesto".`);
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
 
   const abrir = (x: any) => { setS({ ...simInicial(), ...x.datos, nombre: x.nombre }); setCargado({ id: x.id, proyecto_id: x.proyecto_id }); setMsg(""); setOk(""); };
-  const quitar = async (x: any) => { if (!confirm(`¿Quitar la simulación "${x.nombre}"?`)) return; const { error } = await supabase.from("simulaciones").delete().eq("id", x.id); if (error) setMsg(error.message); else { if (cargado?.id === x.id) setCargado(null); guardadas.recargar(); } };
+  const quitar = async (x: any) => { if (!confirm(`¿Mandar la simulación "${x.nombre}" a la papelera? Podrás recuperarla desde el menú Papelera.`)) return; try { await aPapelera("simulaciones", [x.id]); if (cargado?.id === x.id) setCargado(null); guardadas.recargar(); } catch (e: any) { setMsg(e.message); } };
   const lista: any[] = ((guardadas.data as any[]) || []).filter(x => !pidUnico && !zona ? true : x.proyecto_id === pid);
 
   return <>
@@ -201,7 +202,7 @@ export function Simulador() {
 
     <div className="card tw"><h2>Simulaciones guardadas</h2>{guardadas.loading ? <Cargando /> : lista.length ? <table><thead><tr><th>Nombre</th><th>Fecha</th><th>Inversión</th><th>Recuperación</th><th /></tr></thead>
       <tbody>{lista.map(x => { const c = calcular({ ...simInicial(), ...x.datos }); return <tr key={x.id}><td>{x.nombre}{cargado?.id === x.id && <span className="tag" style={{ marginLeft: 6 }}>abierta</span>}</td><td>{String(x.creado_en).slice(0, 10)}</td><td>{bs(c.inversion)}</td><td>{c.recup ? "Mes " + c.recup : "Más de 60 meses"}</td>
-        <td><div className="fila"><button className="btn suave chico" onClick={() => abrir(x)}>Abrir</button><button className="btn suave chico" onClick={() => quitar(x)}>Quitar</button></div></td></tr>; })}</tbody></table> : <Vacio>Aún no guardaste simulaciones.</Vacio>}</div>
+        <td><div className="fila"><button className="btn suave chico" onClick={() => abrir(x)}>Abrir</button><button className="btn suave chico" onClick={() => quitar(x)}>A la papelera</button></div></td></tr>; })}</tbody></table> : <Vacio>Aún no guardaste simulaciones.</Vacio>}</div>
   </>;
 }
 

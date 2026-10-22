@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase, subirArchivo } from "./supabase";
 import { useApp } from "./auth";
 import { Aviso, Campo, Vacio, Cargando, useQuery, useAlcance, hoy } from "./ui";
+import { aPapelera } from "./papelera";
 
 export type CampoDef = { k: string; l: string; t?: "text" | "number" | "date" | "select" | "archivo" | "check"; opts?: string[]; bucket?: "comprobantes" | "fotos"; req?: boolean; def?: any };
 type Props = {
@@ -34,12 +35,12 @@ export default function Crud({ titulo, tabla, campos, columnas, conZona, orden =
       fila.proyecto_id = pid;
       if (conZona) fila.zona_id = zonaId || null;
       const { error } = await supabase.from(tabla).insert(fila);
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(/duplicate key|unique/i.test(error.message) ? "Ya existe un registro igual. Si lo mandaste a la papelera, restáuralo desde el menú Papelera." : error.message);
       setV(vacio()); setOk("Guardado."); q.recargar();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
-  const quitar = async (id: string) => { if (!confirm("¿Quitar este registro?")) return; const { error } = await supabase.from(tabla).delete().eq("id", id); if (error) setMsg(error.message); else q.recargar(); };
+  const quitar = async (id: string) => { if (!confirm("¿Mandar este registro a la papelera? Podrás recuperarlo desde el menú Papelera.")) return; try { await aPapelera(tabla, [id]); q.recargar(); } catch (e: any) { setMsg(e.message); } };
   const filas: any[] = (q.data as any[]) || [];
   return <div className="card"><h2>{titulo}</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="form">{campos.map(c => <Campo key={c.k} l={c.l + (c.req ? " *" : "")}>
@@ -49,6 +50,6 @@ export default function Crud({ titulo, tabla, campos, columnas, conZona, orden =
         : <input type={c.t || "text"} value={v[c.k]} onChange={e => setV({ ...v, [c.k]: e.target.value })} />}</Campo>)}</div>
     <button className="btn" disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Agregar"}</button>
     <div className="tw" style={{ marginTop: 12 }}>{q.loading ? <Cargando /> : q.error ? <Aviso tipo="mal">{q.error}</Aviso> : filas.length ? <table><thead><tr>{cols.map(c => <th key={c}>{campos.find(x => x.k === c)?.l || c}</th>)}{extra && <th />}<th /></tr></thead>
-      <tbody>{filas.map(f => <tr key={f.id}>{cols.map(c => <td key={c}>{typeof f[c] === "boolean" ? (f[c] ? "Sí" : "No") : String(f[c] ?? "—")}</td>)}{extra && <td>{extra(f)}</td>}<td><button className="btn suave chico" onClick={() => quitar(f.id)}>Quitar</button></td></tr>)}</tbody></table> : <Vacio>Aún no hay registros.</Vacio>}</div>
+      <tbody>{filas.map(f => <tr key={f.id}>{cols.map(c => <td key={c}>{typeof f[c] === "boolean" ? (f[c] ? "Sí" : "No") : String(f[c] ?? "—")}</td>)}{extra && <td>{extra(f)}</td>}<td><button className="btn suave chico" onClick={() => quitar(f.id)}>A la papelera</button></td></tr>)}</tbody></table> : <Vacio>Aún no hay registros.</Vacio>}</div>
     {tfoot && filas.length > 0 && <div style={{ marginTop: 8 }}>{tfoot(filas)}</div>}</div>;
 }

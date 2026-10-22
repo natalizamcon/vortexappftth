@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 11 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 12 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -52,4 +52,12 @@ select n, comprobacion, resultado, estado from (
           + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios'))::text,
          case when ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_zona_completa','dar_acceso_zona'))
           + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios')) = 3 then 'OK' else 'FALTA: ejecuta 5_zonas_y_socios.sql' end
+  union all
+  select 12, 'Papelera: nada se borra de verdad (archivo 6)',
+         ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('enviar_a_papelera','restaurar_de_papelera','listar_papelera'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'eliminado_en'))::text,
+         case when (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('enviar_a_papelera','restaurar_de_papelera','listar_papelera')) = 3
+               and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'eliminado_en')
+               and not has_table_privilege('authenticated', 'public.clientes', 'DELETE')
+              then 'OK' else 'FALTA: ejecuta 6_papelera.sql' end
 ) r order by n;

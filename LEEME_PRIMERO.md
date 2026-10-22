@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.4 · Papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 1.5 · Centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -104,3 +104,9 @@ git push origin main
 3. Menú **Papelera** (solo administrador): ver y **Restaurar**.
 4. Mandar una zona o un espacio a la papelera oculta también todo lo que contiene; al restaurarla vuelve todo.
 5. La app ya no puede borrar de verdad. `sql/3_verificar_instalacion.sql` ahora tiene 12 filas en OK.
+
+### Novedades de la 1.5 · Centro de alertas
+1. En Supabase → SQL Editor ejecuta `sql/7_alertas.sql` (solo crea 2 vistas de lectura).
+2. Menú **Alertas** (con numerito rojo) y un bloque "Lo que necesita tu atención" en el Dashboard.
+3. Alertas de cobranza, red, mantenimientos y viajes, inventario e inversores/metas/presupuesto. Cada persona ve solo lo que su rol permite.
+4. `sql/3_verificar_instalacion.sql` ahora tiene 13 filas en OK.

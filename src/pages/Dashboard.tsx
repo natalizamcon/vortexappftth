@@ -1,9 +1,11 @@
 import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
+import { useAlertas } from "../lib/alertas";
+import { TarjetaAlerta } from "./Alertas";
 import { Aviso, Cargando, Kpi, Vacio, bs, hoy, mesActual, nombreMes, sumar, useAlcance, useQuery } from "../lib/ui";
 
 export default function Dashboard() {
-  const { proyectoId, zonaId, perfil } = useApp(), al = useAlcance(), mes = mesActual();
+  const { proyectoId, zonaId, perfil } = useApp(), al = useAlcance(), mes = mesActual(), { alertas } = useAlertas(), urgentes = alertas.filter(a => a.nivel !== "info").slice(0, 3);
   const conteo = (tabla: string, f: (q: any) => any) => f(al(supabase.from(tabla).select("id", { count: "exact", head: true }))).then((r: any) => ({ data: r.count ?? 0, error: r.error }));
   const activos = useQuery(() => conteo("clientes", q => q.neq("estado", "BAJA")), [proyectoId, zonaId]);
   const nuevos = useQuery(() => conteo("clientes", q => q.gte("fecha_instalacion", mes)), [proyectoId, zonaId]);
@@ -23,6 +25,7 @@ export default function Dashboard() {
     <h1>Hola, {perfil?.nombre || "bienvenido"}</h1>
     {(activos.error || cob.error) && <Aviso tipo="mal">{activos.error || cob.error}</Aviso>}
     {zonaId && <Aviso>Con una zona elegida, el resumen por mes (abajo) se muestra del proyecto completo.</Aviso>}
+    {urgentes.length > 0 && <div style={{ marginBottom: 14 }}><div className="fila entre"><h2>Lo que necesita tu atención</h2><a className="btn suave chico" href="#/alertas">Ver todas las alertas</a></div><div style={{ display: "grid", gap: 10 }}>{urgentes.map(a => <TarjetaAlerta key={a.id} a={a} />)}</div></div>}
     <div className="grid gk" style={{ marginBottom: 14 }}>
       <Kpi t="Inversión acumulada (CAPEX)" v={bs(inversion)} s="Infraestructura y equipos" /><Kpi t="Resultado operativo del mes" v={bs(act.ing - act.gas)} c={act.ing - act.gas >= 0 ? "var(--ok)" : "var(--bad)"} s="Ingresos del servicio − gastos operativos" />
       <Kpi t="Clientes activos" v={activos.data ?? 0} /><Kpi t="Nuevos del mes" v={nuevos.data ?? 0} /><Kpi t="Bajas del mes" v={bajas.data ?? 0} />

@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.5 · Centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 1.6 · Formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -110,3 +110,9 @@ git push origin main
 2. Menú **Alertas** (con numerito rojo) y un bloque "Lo que necesita tu atención" en el Dashboard.
 3. Alertas de cobranza, red, mantenimientos y viajes, inventario e inversores/metas/presupuesto. Cada persona ve solo lo que su rol permite.
 4. `sql/3_verificar_instalacion.sql` ahora tiene 13 filas en OK.
+
+### Novedades de la 1.6 · Formularios
+1. No necesita SQL nuevo: solo sube los archivos.
+2. Menú **Formularios**: contrato, orden de instalación, ficha de NAP, troncal, fusiones, lista de compras de ferretería y gastos del viaje.
+3. Se pueden llenar solos con datos de un cliente, una NAP o un viaje, o imprimir en blanco. Botón **Imprimir / Guardar PDF**.
+4. El texto del contrato es un modelo: define las partes en amarillo y pide a un abogado que lo revise.

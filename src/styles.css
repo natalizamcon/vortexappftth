@@ -40,3 +40,23 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .puerto.LIBRE{border-color:var(--ok);color:var(--ok)}.puerto.OCUPADO{background:var(--lil);border-color:var(--lil);color:#fff}.puerto.RESERVADO{border-color:var(--warn);color:var(--warn);border-style:dashed}.puerto.DAÑADO{background:var(--bad);border-color:var(--bad);color:#fff}
 .login{max-width:400px;margin:8vh auto;padding:0 14px}.login img{width:100%;max-width:300px;display:block;margin:0 auto 18px}
 @media(max-width:700px){main{padding:4px 10px 40px}.nav a{padding:6px 8px}.barra select{max-width:48%}}
+
+/* ---------- Formularios imprimibles ---------- */
+.hoja{background:#fff;color:#000;max-width:794px;margin:0 auto 20px;padding:30px 38px;border:1px solid var(--line);box-shadow:0 2px 12px #10142c18;font-size:12.5px;line-height:1.5;outline:none}
+.hoja h1{font-size:18px;margin:0;text-align:center}.hoja h2{font-size:13.5px;margin:14px 0 6px;border-bottom:2px solid #08bfc5;padding-bottom:2px}
+.hoja .cab{display:flex;align-items:center;gap:16px;border-bottom:3px solid #7928ca;padding-bottom:8px;margin-bottom:10px}.hoja .cab img{height:54px}.hoja .cab .t{flex:1;text-align:center}
+.hoja .sub{color:#444;font-size:12px;text-align:center}
+.hoja .dato{display:inline-flex;align-items:flex-end;gap:4px;margin:3px 14px 3px 0;white-space:nowrap}
+.hoja .linea{display:inline-block;min-width:150px;border-bottom:1px solid #000;min-height:18px;padding:0 4px;white-space:normal}
+.hoja table{border-collapse:collapse;width:100%;min-width:0;margin:4px 0 8px}.hoja th,.hoja td{border:1px solid #444;padding:4px 6px;height:25px;text-align:left;vertical-align:top;font-size:12px}.hoja th{background:#efe4fb}
+.hoja p{margin:5px 0;text-align:justify}.hoja .firmas{display:flex;gap:40px;margin-top:46px}.hoja .firmas div{flex:1;text-align:center;border-top:1px solid #000;padding-top:4px}
+.hoja .caja{display:inline-block;width:12px;height:12px;border:1px solid #000;margin-right:6px;vertical-align:middle}
+.hoja .pend{background:#fff3b0;padding:0 3px}
+.opciones .on{outline:2px solid var(--acc)}
+@media print{
+  body *{visibility:hidden}
+  .hoja,.hoja *{visibility:visible}
+  .hoja{position:absolute;left:0;top:0;width:100%;max-width:none;margin:0;border:none;box-shadow:none;padding:0}
+  .hoja th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:14mm}
+}

@@ -35,7 +35,7 @@ const Casilla = ({ children }: { children: ReactNode }) => <div><span className=
 function Contrato({ c, zona, equipos, puerto, nap }: any) {
   const inst = c?.fecha_instalacion || hoy();
   return <>
-    <Cab titulo="CONTRATO DE SERVICIO DE INTERNET POR FIBRA ÓPTICA" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="CONTRATO DE SERVICIO DE INTERNET POR FIBRA ÓPTICA" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <p>Entre <b>VORTEX, Internet de Fibra Óptica</b>, en adelante <b>LA EMPRESA</b>, y <b>{c?.nombre || "______________________________"}</b>, con C.I. <b>{c?.ci || "______________"}</b>, domiciliado(a) en <b>{c?.direccion || "______________________________________"}</b>, teléfono <b>{c?.telefono || "______________"}</b>, en adelante <b>EL CLIENTE</b>, se acuerda lo siguiente:</p>
     <h2>PRIMERA · Objeto</h2>
     <p>LA EMPRESA presta a EL CLIENTE el servicio de acceso a internet por fibra óptica, plan <b>{c?.plan_nombre || "__________"}</b> de <b>{c?.mbps || "____"} Mbps</b>{nap ? <>, conectado a la NAP <b>{nap.codigo}</b>{puerto ? <>, puerto <b>{puerto.numero}</b></> : null}</> : null}, en el domicilio indicado.</p>
@@ -63,7 +63,7 @@ function Contrato({ c, zona, equipos, puerto, nap }: any) {
 
 function Instalacion({ c, zona, equipos, puerto, nap }: any) {
   return <>
-    <Cab titulo="ORDEN DE INSTALACIÓN" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="ORDEN DE INSTALACIÓN" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <h2>Datos del cliente</h2>
     <D e="Código" v={c?.codigo} w={90} /><D e="Nombre" v={c?.nombre} w={280} /><D e="C.I." v={c?.ci} w={110} /><br />
     <D e="Dirección" v={c?.direccion} w={380} /><D e="Teléfono" v={c?.telefono} w={110} />
@@ -87,7 +87,7 @@ function FichaNap({ nap, zona, puertos, clientesNap }: any) {
   const porPuerto: Record<string, string> = {}; (clientesNap || []).forEach((c: any) => { porPuerto[c.puerto_id] = c.nombre; });
   const filas = (puertos || []).map((p: any) => [p.numero, p.estado, porPuerto[p.id] || p.reservado_para || "", ""]);
   return <>
-    <Cab titulo="FICHA DE NAP" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="FICHA DE NAP" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <D e="Código" v={nap?.codigo} w={110} /><D e="Tipo" v={nap?.tipo} w={100} /><D e="Cantidad de puertos" v={nap?.puertos} w={60} /><br />
     <D e="Ubicación / coordenadas" v={nap?.lat != null && nap?.lng != null ? `${nap.lat}, ${nap.lng}` : ""} w={300} /><D e="Poste N°" w={80} />
     <h2>Puertos</h2>
@@ -99,7 +99,7 @@ function FichaNap({ nap, zona, puertos, clientesNap }: any) {
 
 function Troncal({ zona }: any) {
   return <>
-    <Cab titulo="REGISTRO DE TRONCAL" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="REGISTRO DE TRONCAL" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <D e="Código de troncal" w={120} /><D e="Desde" w={160} /><D e="Hasta" w={160} /><br />
     <D e="Longitud total (m)" w={90} /><D e="Cantidad de hilos" w={70} /><D e="Tipo de fibra" w={120} /><D e="Fecha" w={100} />
     <h2>Postes</h2>
@@ -113,7 +113,7 @@ function Troncal({ zona }: any) {
 
 function Fusiones({ zona }: any) {
   return <>
-    <Cab titulo="REGISTRO DE FUSIONES" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="REGISTRO DE FUSIONES" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <D e="Troncal / caja" w={200} /><D e="Fecha" w={100} /><D e="Técnico" w={180} />
     <Tabla cols={["N°", "Hilo / color", "Origen", "Destino", "Pérdida (dB)", "Observación"]} vacias={20} />
     <Firmas a="Técnico" b="Supervisor" />
@@ -123,7 +123,7 @@ function Fusiones({ zona }: any) {
 function Ferreteria({ filas, zona }: any) {
   const total = filas.reduce((s: number, f: any) => s + f.comprar * n(f.costo), 0);
   return <>
-    <Cab titulo="LISTA DE COMPRAS DE FERRETERÍA" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="LISTA DE COMPRAS DE FERRETERÍA" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <D e="Proveedor" w={220} /><D e="Solicitado por" w={200} />
     <Tabla cols={["Material", "Unidad", "Hay", "Mínimo", "Comprar", "Costo unit.", "Total est."]}
       filas={filas.map((f: any) => [f.nombre, f.unidad, f.tiene, n(f.minimo), f.comprar, bs(f.costo), bs(f.comprar * n(f.costo))])} vacias={Math.max(4, 12 - filas.length)} />
@@ -135,7 +135,7 @@ function Ferreteria({ filas, zona }: any) {
 function Viaje({ v, zona }: any) {
   const dias: string[] = []; if (v) for (let d = v.fecha_inicio, i = 0; d <= v.fecha_fin && i < 31; d = sumaDias(d, 1), i++) dias.push(d);
   return <>
-    <Cab titulo="PLANILLA DE GASTOS DEL VIAJE" sub={zona ? "Zona " + zona.nombre : undefined} />
+    <Cab titulo="PLANILLA DE GASTOS DEL VIAJE" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <D e="Tipo" v={v?.tipo} w={140} /><D e="Detalle" v={v?.detalle} w={260} /><br />
     <D e="Desde" v={v?.fecha_inicio} w={100} /><D e="Hasta" v={v?.fecha_fin} w={100} /><D e="Personal" v={v?.personal} w={220} /><D e="Personas" v={v?.personas} w={50} />
     {v && <p><b>Presupuestado:</b> gasolina {bs(v.gasolina)} · movilidad {bs(v.movilidad)} · pago por día {bs(v.pago_dia)} · viáticos por día {bs(v.viaticos_dia)}</p>}

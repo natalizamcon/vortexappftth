@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 13 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 14 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -64,4 +64,8 @@ select n, comprobacion, resultado, estado from (
   select 13, 'Centro de alertas (archivo 7)',
          (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_naps_ocupacion','v_reservas_vencidas'))::text,
          case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_naps_ocupacion','v_reservas_vencidas')) = 2 then 'OK' else 'FALTA: ejecuta 7_alertas.sql' end
+  union all
+  select 14, 'Reportes (archivo 8)',
+         (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_pagos','v_instalaciones'))::text,
+         case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_pagos','v_instalaciones')) = 2 then 'OK' else 'FALTA: ejecuta 8_reportes.sql' end
 ) r order by n;

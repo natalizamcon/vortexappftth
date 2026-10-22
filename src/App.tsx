@@ -15,11 +15,12 @@ import Usuarios from "./pages/Usuarios";
 import Papelera from "./pages/Papelera";
 import Alertas from "./pages/Alertas";
 import Formularios from "./pages/Formularios";
+import Reportes from "./pages/Reportes";
 import { AlertasProvider, ContadorAlertas } from "./lib/alertas";
 
 const RUTAS: [string, string, string[] | null][] = [
   ["dashboard", "Dashboard", null], ["alertas", "Alertas", null], ["zonas", "Zonas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
-  ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["formularios", "Formularios", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["usuarios", "Usuarios", ["admin"]], ["papelera", "Papelera", ["admin"]],
+  ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["formularios", "Formularios", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["reportes", "Reportes", null], ["usuarios", "Usuarios", ["admin"]], ["papelera", "Papelera", ["admin"]],
 ];
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
@@ -35,7 +36,7 @@ export default function App() {
   const pagina = () => {
     switch (ruta) {
       case "zonas": return <Zonas />; case "clientes": return <Clientes />; case "cobranzas": return <Cobranzas />; case "red": return <Red />;
-      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "usuarios": return <Usuarios />; case "papelera": return <Papelera />; case "alertas": return <Alertas />; case "formularios": return <Formularios />;
+      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "usuarios": return <Usuarios />; case "papelera": return <Papelera />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
       default: return <Dashboard />;
     }
   };

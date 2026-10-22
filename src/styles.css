@@ -68,3 +68,20 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .hilo.LIBRE{background:var(--okb)}.hilo.UTILIZADO{background:var(--lilb)}.hilo.RESERVADO{background:var(--warnb)}.hilo.DAÑADO{background:var(--badb)}
 .hilo:hover{filter:brightness(.97)}
 .punto-hilo{display:inline-block;width:11px;height:11px;border-radius:50%;border:1px solid #0003;vertical-align:middle}
+
+/* ---------- Finanzas: carpetas, gráficos y simulador ---------- */
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.subtabs button{border:1px solid var(--line);background:var(--panel);color:var(--mute);border-radius:99px;padding:6px 14px;font:inherit;cursor:pointer}
+.subtabs button.on{background:var(--lilb);border-color:var(--lil);color:var(--lil);font-weight:600}
+.bar{height:10px;background:var(--bg);border-radius:99px;overflow:hidden;display:flex}.bar i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;font-size:12.5px}
+.sim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;align-items:start}.sim-col{display:grid;gap:12px}.sim-col .card{margin:0}
+.num{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}.num>span:first-child{flex:1}.num input,.num select{width:110px}.num small{width:42px;color:var(--mute)}
+.tot{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-weight:600}
+.verdict{border-radius:8px;padding:12px 14px;font-weight:600}
+.recov{background:var(--lilb);border:1px solid var(--lil);border-radius:8px;padding:12px 14px}.recov span{color:var(--mute);display:block}.recov b{font-size:22px;display:block;color:var(--lil)}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}.dl dt{color:var(--mute)}.dl dd{margin:0}
+
+/* Gráficos: siempre de a dos (mitad y mitad); en pantallas angostas, uno debajo del otro */
+.mitades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}.mitades>.card{margin:0}
+@media(max-width:900px){.mitades{grid-template-columns:1fr}}

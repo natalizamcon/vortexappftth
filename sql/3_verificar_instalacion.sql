@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 16 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 18 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -82,4 +82,20 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('zona_socios','zona_fondos_pct','costos_compartidos','costos_compartidos_zonas','costos_compartidos_meses','gastos_empresa','fondos_empresa','liquidaciones','liquidacion_socios','liquidacion_fondos')) = 10
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_gasto_empresa','confirmar_liquidacion','anular_liquidacion','marcar_pago_socio')) = 4
               then 'OK' else 'FALTA: ejecuta 10_finanzas_reparto.sql' end
+  union all
+  select 17, 'Finanzas ordenada: gráficos y compras de la empresa (archivo 11)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'compras_empresa')
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_resumen_zona_mes'))::text,
+         case when exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'compras_empresa')
+               and exists (select 1 from information_schema.views where table_schema = 'public' and table_name = 'v_resumen_zona_mes')
+              then 'OK' else 'FALTA: ejecuta 11_finanzas_orden.sql' end
+  union all
+  select 18, 'Red perfeccionada: papelera de NAP e historial de puertos (archivo 12)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'puertos_historial')
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name in ('eliminado_en','troncal_id','padre_id'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'ampliar_nap'))::text,
+         case when exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'puertos_historial')
+               and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name in ('eliminado_en','troncal_id','padre_id')) = 3
+               and exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'ampliar_nap')
+              then 'OK' else 'FALTA: ejecuta 12_red_perfeccionada.sql' end
 ) r order by n;

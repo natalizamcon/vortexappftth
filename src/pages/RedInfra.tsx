@@ -4,6 +4,7 @@ import { useApp } from "../lib/auth";
 import { aPapelera } from "../lib/papelera";
 import { Aviso, Campo, Cargando, Kpi, Vacio, hoy, useAlcance, useQuery } from "../lib/ui";
 import Crud from "../lib/crud";
+import { FormModal } from "../lib/formmodal";
 
 const n = (x: any) => Number(x) || 0;
 const nada = Promise.resolve({ data: [], error: null });
@@ -68,7 +69,7 @@ export function Troncales({ ir }: { ir: (tab: string, troncal?: string) => void 
   const res = useQuery(() => al(supabase.from("v_troncales_resumen").select("*").order("codigo")), [proyectoId, zonaId]);
   const pons = useQuery(() => zonaId ? supabase.from("v_puertos_pon").select("id, olt_nombre, numero").eq("zona_id", zonaId).eq("estado", "LIBRE").order("olt_nombre").order("numero") : nada, [zonaId, res.data]);
   const vacio = { codigo: "", desde: "", hasta: "", tipo_fibra: "G.652D", longitud_km: "", hilos: "12", pon_id: "", observaciones: "" };
-  const [f, setF] = useState(vacio), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+  const [f, setF] = useState(vacio), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [edT, setEdT] = useState<any>(null);
   const nz = (id: string) => zonas.find(z => z.id === id)?.nombre || "";
   const crear = async () => {
     setMsg(""); setOk(""); const zona = zonas.find(z => z.id === zonaId);
@@ -103,7 +104,8 @@ export function Troncales({ ir }: { ir: (tab: string, troncal?: string) => void 
     <div className="card tw"><h2>Troncales</h2>{res.loading ? <Cargando /> : R.length ? <table><thead><tr><th>Código</th><th>Zona</th><th>Recorrido</th><th>Fibra</th><th>Km</th><th>Hilos</th><th>Libres</th><th>Usados</th><th>Reservados</th><th>Dañados</th><th /></tr></thead>
       <tbody>{R.map(t => <tr key={t.troncal_id}><td><b>{t.codigo}</b></td><td>{nz(t.zona_id)}</td><td>{[t.desde, t.hasta].filter(Boolean).join(" → ") || "—"}</td><td>{t.tipo_fibra}</td><td>{n(t.longitud_km)}</td><td>{t.total}</td>
         <td>{t.libres}</td><td>{t.utilizados}</td><td>{t.reservados}</td><td style={{ color: n(t.danados) ? "var(--bad)" : undefined }}>{t.danados}</td>
-        <td><div className="fila"><button className="btn suave chico" onClick={() => ir("hilos", t.troncal_id)}>Hilos y fusiones</button><button className="btn suave chico" onClick={() => quitar(t)}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay troncales.</Vacio>}</div>
+        <td><div className="fila"><button className="btn suave chico" onClick={() => ir("hilos", t.troncal_id)}>Hilos y fusiones</button><button className="btn suave chico" onClick={() => setEdT(t)}>Editar</button><button className="btn suave chico" onClick={() => quitar(t)}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay troncales.</Vacio>}</div>
+    {edT && <EditarTroncal t={edT} onClose={() => setEdT(null)} onListo={() => { setEdT(null); res.recargar(); }} />}
   </>;
 }
 
@@ -114,10 +116,10 @@ export function HilosFusiones({ troncalId, setTroncalId }: { troncalId: string; 
   const { zonaId, proyectoId } = useApp(), al = useAlcance();
   const lista = useQuery(() => al(supabase.from("v_troncales_resumen").select("*").order("codigo")), [proyectoId, zonaId]);
   const L: any[] = (lista.data as any[]) || [], t: any = L.find(x => x.troncal_id === troncalId) || L[0];
-  const hilos = useQuery(() => t ? supabase.from("hilos").select("id, numero, estado").eq("troncal_id", t.troncal_id).order("numero") : nada, [t?.troncal_id]);
+  const hilos = useQuery(() => t ? supabase.from("hilos").select("id, numero, estado, nota").eq("troncal_id", t.troncal_id).order("numero") : nada, [t?.troncal_id]);
   const fus = useQuery(() => t ? supabase.from("v_fusiones").select("*").eq("troncal_id", t.troncal_id).order("fecha", { ascending: false }) : nada, [t?.troncal_id]);
   const naps = useQuery(() => t ? supabase.from("naps").select("id, codigo").eq("zona_id", t.zona_id).order("codigo") : nada, [t?.zona_id]);
-  const [ov, setOv] = useState<Record<string, string>>({}), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [arch, setArch] = useState<File | null>(null);
+  const [ov, setOv] = useState<Record<string, string>>({}), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [arch, setArch] = useState<File | null>(null), [edF, setEdF] = useState<any>(null);
   const vacio = { hilo_entrada: "", caja_empalme: "", splitter: "Sin splitter", hilo_salida: "", nap_id: "", perdida_db: "", fecha: hoy(), tecnico: "", observaciones: "" };
   const [f, setF] = useState(vacio);
 
@@ -126,6 +128,7 @@ export function HilosFusiones({ troncalId, setTroncalId }: { troncalId: string; 
     const { error } = await supabase.from("hilos").update({ estado: nuevo }).eq("id", h.id);
     if (error) { setOv(o => { const c = { ...o }; delete c[h.id]; return c; }); setMsg(error.message); } else lista.recargar();
   };
+  const editarNota = async (h: any) => { const nota = prompt(`Nota para el hilo ${h.numero} (déjala vacía para borrarla):`, h.nota || ""); if (nota === null) return; const { error } = await supabase.from("hilos").update({ nota: nota.trim() || null }).eq("id", h.id); if (error) setMsg(error.message); else hilos.recargar(); };
   const agregar = async () => {
     setMsg(""); setOk("");
     if (!t) return;
@@ -154,7 +157,7 @@ export function HilosFusiones({ troncalId, setTroncalId }: { troncalId: string; 
     <div className="card"><h2>Hilos</h2>
       <p className="mute">Toca un hilo para cambiar su estado: libre → utilizado → reservado → dañado. El color de la izquierda es el código estándar de colores.</p>
       <div className="fila" style={{ marginBottom: 8 }}><span className="tag">Libres {cuenta("LIBRE")}</span><span className="tag">Utilizados {cuenta("UTILIZADO")}</span><span className="tag">Reservados {cuenta("RESERVADO")}</span><span className="tag">Dañados {cuenta("DAÑADO")}</span></div>
-      {hilos.loading ? <Cargando /> : <div className="hilos-grid">{H.map(h => { const c = colorHilo(h.numero); return <button key={h.id} className={"hilo " + est(h)} style={{ borderLeftColor: c.hex }} onClick={() => cambiar(h)}><b>Hilo {h.numero}</b><small>{c.nombre} · {est(h).toLowerCase()}</small></button>; })}</div>}</div>
+      {hilos.loading ? <Cargando /> : <div className="hilos-grid">{H.map(h => { const c = colorHilo(h.numero), fu = F.filter(x => n(x.hilo_entrada) === h.numero), dest = fu.map(x => [x.caja_empalme, x.nap_codigo && "→ " + x.nap_codigo].filter(Boolean).join(" ")).filter(Boolean).join(" · "); return <div key={h.id} role="button" tabIndex={0} className={"hilo " + est(h)} style={{ borderLeftColor: c.hex }} onClick={() => cambiar(h)}><b>Hilo {h.numero} <span title="Escribir una nota" style={{ float: "right", cursor: "pointer" }} onClick={e => { e.stopPropagation(); editarNota(h); }}>✎</span></b><small>{c.nombre} · {est(h).toLowerCase()}</small>{dest && <small style={{ color: "var(--lil)" }}>{dest}</small>}{h.nota && <small>📝 {h.nota}</small>}</div>; })}</div>}</div>
 
     <div className="card"><h2>Registrar una fusión</h2>
       <div className="form">
@@ -173,14 +176,15 @@ export function HilosFusiones({ troncalId, setTroncalId }: { troncalId: string; 
     <div className="card tw"><h2>Fusiones de {t.codigo}</h2>{fus.loading ? <Cargando /> : F.length ? <table><thead><tr><th>Fecha</th><th>Hilo de entrada</th><th>Caja</th><th>Splitter</th><th>Hilo de salida</th><th>NAP</th><th>Pérdida</th><th>Técnico</th><th /></tr></thead>
       <tbody>{F.map(x => <tr key={x.id}><td>{x.fecha}</td><td><span className="punto-hilo" style={{ background: colorHilo(n(x.hilo_entrada)).hex }} /> Hilo {x.hilo_entrada} ({colorHilo(n(x.hilo_entrada)).nombre})</td><td>{x.caja_empalme || "—"}</td><td>{x.splitter || "—"}</td><td>{x.hilo_salida || "—"}</td><td>{x.nap_codigo || "—"}</td>
         <td style={{ color: n(x.perdida_db) > PERDIDA_ALTA ? "var(--bad)" : undefined, fontWeight: n(x.perdida_db) > PERDIDA_ALTA ? 700 : undefined }}>{x.perdida_db == null ? "—" : n(x.perdida_db).toFixed(2) + " dB"}</td><td>{x.tecnico || "—"}</td>
-        <td><div className="fila">{x.foto_path && <button className="btn suave chico" onClick={() => verFoto(x.foto_path)}>Ver foto</button>}<button className="btn suave chico" onClick={() => quitar(x)}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay fusiones registradas en esta troncal.</Vacio>}
+        <td><div className="fila">{x.foto_path && <button className="btn suave chico" onClick={() => verFoto(x.foto_path)}>Ver foto</button>}<button className="btn suave chico" onClick={() => setEdF(x)}>Editar</button><button className="btn suave chico" onClick={() => quitar(x)}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay fusiones registradas en esta troncal.</Vacio>}
       <p className="mute">La pérdida de una fusión suele estar por debajo de 0,1 dB. Desde {PERDIDA_ALTA} dB se marca en rojo como pérdida alta.</p></div>
+    {edF && <EditarFusion x={edF} naps={(naps.data as any[]) || []} total={t.total} onClose={() => setEdF(null)} onListo={() => { setEdF(null); fus.recargar(); lista.recargar(); }} />}
   </>;
 }
 
 /* ============================ POSTES ============================ */
 export function Postes() {
-  return <Crud titulo="Postes y ferretería instalada" tabla="postes" conZona orden="creado_en"
+  return <Crud titulo="Postes y ferretería instalada" tabla="postes" conZona orden="creado_en" editar
     campos={[
       { k: "codigo", l: "Código del poste", req: true }, { k: "tipo", l: "Tipo", t: "select", opts: ["Madera 7 m", "Madera 9 m", "Concreto 9 m", "Concreto 12 m", "Metálico", "Otro"] },
       { k: "ferreteria", l: "Ferretería instalada (tensores, grampas…)" }, { k: "fecha_instalacion", l: "Fecha de instalación", t: "date" }, { k: "tecnico", l: "Técnico" },
@@ -193,7 +197,7 @@ export function Postes() {
 export function OltPon() {
   const { zonas, zonaId, proyectoId } = useApp(), al = useAlcance();
   const olts = useQuery(() => al(supabase.from("v_olts_resumen").select("*").order("nombre")), [proyectoId, zonaId]);
-  const [sel, setSel] = useState(""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+  const [sel, setSel] = useState(""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [edO, setEdO] = useState<any>(null);
   const O: any[] = (olts.data as any[]) || [], o: any = O.find(x => x.olt_id === sel) || O[0];
   const pon = useQuery(() => o ? supabase.from("v_puertos_pon").select("*").eq("olt_id", o.olt_id).order("numero") : nada, [o?.olt_id]);
   const vacio = { nombre: "", marca: "", modelo: "", serie: "", ip_gestion: "", ubicacion: "", puertos_pon: "8", fecha_instalacion: hoy(), estado: "ACTIVA", observaciones: "" };
@@ -233,7 +237,8 @@ export function OltPon() {
 
     <div className="card tw"><h2>OLT</h2>{olts.loading ? <Cargando /> : O.length ? <table><thead><tr><th>Nombre</th><th>Zona</th><th>Equipo</th><th>IP</th><th>Estado</th><th>Puertos PON</th><th>En uso</th><th>Libres</th><th>Dañados</th><th /></tr></thead>
       <tbody>{O.map(x => <tr key={x.olt_id} className="clic" style={{ background: o?.olt_id === x.olt_id ? "var(--lilb)" : undefined }} onClick={() => setSel(x.olt_id)}><td><b>{x.nombre}</b></td><td>{nz(x.zona_id)}</td><td>{[x.marca, x.modelo].filter(Boolean).join(" ") || "—"}</td><td>{x.ip_gestion || "—"}</td><td>{x.estado}</td><td>{x.total}</td><td>{x.en_uso}</td><td>{x.libres}</td><td>{x.danados}</td>
-        <td><button className="btn suave chico" onClick={e => { e.stopPropagation(); quitar(x); }}>A la papelera</button></td></tr>)}</tbody></table> : <Vacio>Aún no hay OLT registradas.</Vacio>}</div>
+        <td><div className="fila"><button className="btn suave chico" onClick={e => { e.stopPropagation(); setEdO(x); }}>Editar</button><button className="btn suave chico" onClick={e => { e.stopPropagation(); quitar(x); }}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay OLT registradas.</Vacio>}</div>
+    {edO && <EditarOlt o={edO} onClose={() => setEdO(null)} onListo={() => { setEdO(null); olts.recargar(); }} />}
 
     {o && <div className="card tw"><h2>Puertos PON de {o.nombre}</h2>{pon.loading ? <Cargando /> : <table><thead><tr><th>PON</th><th>Estado</th><th>Potencia (dBm)</th><th>Nota</th></tr></thead>
       <tbody>{P.map(p => <tr key={p.id}><td><b>{p.numero}</b></td>
@@ -241,4 +246,28 @@ export function OltPon() {
         <td><input type="number" step={0.01} style={{ width: 100 }} defaultValue={p.potencia_dbm ?? ""} onBlur={e => (e.target.value === "" ? p.potencia_dbm != null : n(e.target.value) !== n(p.potencia_dbm)) && guardarPon(p, { potencia_dbm: e.target.value === "" ? null : n(e.target.value) })} /></td>
         <td><input style={{ width: 220 }} defaultValue={p.nota ?? ""} onBlur={e => e.target.value !== (p.nota ?? "") && guardarPon(p, { nota: e.target.value || null })} /></td></tr>)}</tbody></table>}</div>}
   </>;
+}
+
+/* ============================ VENTANAS DE EDICIÓN ============================ */
+function EditarTroncal({ t, onClose, onListo }: { t: any; onClose: () => void; onListo: () => void }) {
+  const fila = useQuery(() => supabase.from("troncales").select("*").eq("id", t.troncal_id).maybeSingle(), [t.troncal_id]);
+  if (fila.loading) return <Cargando />;
+  return <FormModal titulo={"Editar " + t.codigo} valores={fila.data || t} onClose={onClose}
+    campos={[{ k: "codigo", l: "Código", req: true }, { k: "desde", l: "Desde" }, { k: "hasta", l: "Hasta" }, { k: "tipo_fibra", l: "Tipo de fibra", t: "select", opts: ["G.652D", "G.657A1", "G.657A2", "G.655", "Otro"].map(x => [x, x] as [string, string]) }, { k: "longitud_km", l: "Longitud (km)", t: "number", paso: 0.01 }, { k: "observaciones", l: "Observaciones" }]}
+    onGuardar={async f => { const { error } = await supabase.from("troncales").update({ ...f, longitud_km: f.longitud_km ?? 0 }).eq("id", t.troncal_id); if (error) return msgUnico(error.message, "una troncal"); onListo(); }}
+    extra={<p className="mute">La cantidad de hilos ({t.total}) no se cambia aquí: si necesitas otra cantidad, crea una troncal nueva.</p>} />;
+}
+function EditarFusion({ x, naps, total, onClose, onListo }: { x: any; naps: any[]; total: number; onClose: () => void; onListo: () => void }) {
+  return <FormModal titulo="Editar fusión" valores={x} onClose={onClose} ancho={640}
+    campos={[{ k: "hilo_entrada", l: `Hilo de entrada (1 a ${total})`, t: "number", req: true }, { k: "caja_empalme", l: "Caja de empalme" }, { k: "splitter", l: "Splitter", t: "select", opts: [["", "Sin splitter"], ...["1:2", "1:4", "1:8", "1:16", "1:32"].map(s => [s, s] as [string, string])] }, { k: "hilo_salida", l: "Hilo de salida" },
+      { k: "nap_id", l: "NAP de destino", t: "select", opts: [["", "Ninguna"], ...naps.map(n2 => [n2.id, n2.codigo] as [string, string])] }, { k: "perdida_db", l: "Pérdida medida (dB)", t: "number", paso: 0.01 }, { k: "fecha", l: "Fecha", t: "date" }, { k: "tecnico", l: "Técnico" }, { k: "observaciones", l: "Observaciones" }]}
+    onGuardar={async f => { if (!(f.hilo_entrada >= 1 && f.hilo_entrada <= total)) return `El hilo de entrada debe estar entre 1 y ${total}.`; const { error } = await supabase.from("fusiones").update(f).eq("id", x.id); if (error) return error.message; onListo(); }} />;
+}
+function EditarOlt({ o, onClose, onListo }: { o: any; onClose: () => void; onListo: () => void }) {
+  const fila = useQuery(() => supabase.from("olts").select("*").eq("id", o.olt_id).maybeSingle(), [o.olt_id]);
+  if (fila.loading) return <Cargando />;
+  return <FormModal titulo={"Editar " + o.nombre} valores={fila.data || o} onClose={onClose} ancho={640}
+    campos={[{ k: "nombre", l: "Nombre", req: true }, { k: "marca", l: "Marca" }, { k: "modelo", l: "Modelo" }, { k: "serie", l: "N° de serie" }, { k: "ip_gestion", l: "IP de gestión" }, { k: "ubicacion", l: "Ubicación" }, { k: "fecha_instalacion", l: "Fecha de instalación", t: "date" }, { k: "estado", l: "Estado", t: "select", opts: ["ACTIVA", "MANTENIMIENTO", "BAJA"].map(x => [x, x] as [string, string]) }, { k: "observaciones", l: "Observaciones" }]}
+    onGuardar={async f => { const { error } = await supabase.from("olts").update(f).eq("id", o.olt_id); if (error) return msgUnico(error.message, "una OLT"); onListo(); }}
+    extra={<p className="mute">La cantidad de puertos PON ({o.total}) no se cambia aquí.</p>} />;
 }

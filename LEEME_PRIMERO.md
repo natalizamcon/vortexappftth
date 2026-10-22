@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.9 · Finanzas (reparto de utilidades), red completa, reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 2.0 · Finanzas ordenada en carpetas, red perfeccionada, red completa, reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -135,3 +135,14 @@ git push origin main
 3. Finanzas (socio): pestaña **Mi reparto**.
 4. Utilidad = cobrado − gastos operativos − costos compartidos − pagos a inversores. Primero los socios, y lo que queda para el dueño se divide en los 4 fondos.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 16 filas en OK.
+
+### Novedades de la 2.0 · Finanzas ordenada en carpetas y Red perfeccionada
+1. En Supabase → SQL Editor ejecuta, **en este orden**: `sql/11_finanzas_orden.sql` y luego `sql/12_red_perfeccionada.sql` (es seguro, no borra datos).
+2. **Finanzas en 4 carpetas**, cada una con sus pestañas:
+   - **Panel:** Rentabilidad · Ingresos y gastos (con gráficos de a dos).
+   - **Inversores y reparto:** Inversores · Reparto de utilidades · Socios y porcentajes · Caja y fondos (el socio ve "Mi reparto").
+   - **Simulador y presupuesto:** Simulador de proyecto (resultados en vivo a un costado) · Presupuesto de la zona · Presupuesto vs real.
+   - **Costos y compras:** Costos compartidos · Gastos de la empresa · Compras de la empresa · Pagos al personal.
+3. **Red:** NAP con editar / ampliar puertos / papelera, historial de cada puerto, editar troncales, fusiones, OLT y postes, destino y notas en los hilos, ver fotos.
+4. En todas las listas con botón "Editar" y "Ver archivo" donde corresponde.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 18 filas en OK.

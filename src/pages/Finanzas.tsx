@@ -1,43 +1,46 @@
 import { useState } from "react";
 import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
-import { Aviso, Campo, Cargando, Tabs, Vacio, bs, hoy, nombreMes, useAlcance, useQuery } from "../lib/ui";
+import { Aviso, Campo, Tabs, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import Crud from "../lib/crud";
 import { aPapelera } from "../lib/papelera";
-import { Presupuesto, PresupuestoVsReal, Simulador } from "./Presupuesto";
+import { Presupuesto, PresupuestoVsReal } from "./Presupuesto";
+import Simulador from "./Simulador";
+import Compras from "./Compras";
+import { IngresosGastos, Rentabilidad } from "./FinanzasPanel";
 import { CajaFondos, CostosCompartidos, GastosEmpresa, MiReparto, RepartoUtilidades, SociosPorcentajes } from "./FinanzasReparto";
 
+/** Finanzas ordenada en carpetas: cada carpeta agrupa lo que va junto. */
 export default function Finanzas() {
-  const { perfil } = useApp(), [tab, setTab] = useState("res");
-  const admin = perfil?.rol === "admin", socio = perfil?.rol === "socio";
-  const items: [string, string][] = [["res", "Resumen"], ["mov", "Ingresos y gastos"],
-    ...(admin ? [["rep", "Reparto de utilidades"], ["soc", "Socios y porcentajes"], ["comp", "Costos compartidos"], ["emp", "Gastos de la empresa"], ["fon", "Caja y fondos"]] as [string, string][] : []),
-    ...(socio ? [["mi", "Mi reparto"]] as [string, string][] : []),
-    ["inv", "Inversores"], ["per", "Pagos al personal"], ["sim", "Simulador"], ["pre", "Presupuesto"], ["vs", "Presupuesto vs real"]];
-  return <><h1>Finanzas</h1><Tabs items={items} valor={tab} onChange={setTab} />
-    {tab === "res" && <Resumen />}
-    {tab === "mov" && <Crud titulo="Ingresos, gastos operativos e inversiones (si eliges una zona arriba, el registro queda en esa zona)" tabla="fin_movimientos" orden="fecha" conZona="opcional" select="*, zonas(nombre)" extra={f => <span className="mute">{f.zonas?.nombre || "Todo el proyecto"}</span>} campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "tipo", l: "Tipo", t: "select", opts: ["INGRESO", "GASTO_OPERATIVO", "INVERSION"], req: true }, { k: "categoria", l: "Categoría (Starlink, materiales…)" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "descripcion", l: "Descripción" }, { k: "comprobante_path", l: "Comprobante", t: "archivo" }]} columnas={["fecha", "tipo", "categoria", "monto", "descripcion"]} />}
-    {tab === "sim" && <Simulador />}
-    {tab === "pre" && <Presupuesto />}
-    {tab === "vs" && <PresupuestoVsReal />}
-    {tab === "inv" && <Inversores />}
-    {tab === "per" && <Crud titulo="Pagos hechos al personal (respaldo)" tabla="pagos_personal" conZona orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "trabajador", l: "Trabajador", req: true }, { k: "concepto", l: "Concepto", t: "select", opts: ["Jornal", "Pago de viaje", "Viáticos", "Bono", "Adelanto", "Otro"], def: "Jornal" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "nota", l: "Nota" }, { k: "comprobante_path", l: "Respaldo (foto del recibo)", t: "archivo" }]} columnas={["fecha", "trabajador", "concepto", "monto", "nota"]} tfoot={f => <b>Total: {bs(f.reduce((s, x) => s + +x.monto, 0))}</b>} />}
-    {tab === "rep" && <RepartoUtilidades />}
-    {tab === "soc" && <SociosPorcentajes />}
-    {tab === "comp" && <CostosCompartidos />}
-    {tab === "emp" && <GastosEmpresa />}
-    {tab === "fon" && <CajaFondos />}
-    {tab === "mi" && <MiReparto />}
+  const { perfil } = useApp(), admin = perfil?.rol === "admin";
+  const socio = perfil?.rol === "socio", par = (x: [string, string][], si: boolean) => (si ? x : []);
+  const carpetas: [string, string, [string, string][]][] = [
+    ["panel", "Panel", [["rent", "Rentabilidad"], ["mov", "Ingresos y gastos"]]],
+    ["inv", "Inversores y reparto", [["inv", "Inversores"], ...par([["rep", "Reparto de utilidades"], ["soc", "Socios y porcentajes"], ["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
+    ["sim", "Simulador y presupuesto", [["sim", "Simulador de proyecto"], ["pre", "Presupuesto de la zona"], ["vs", "Presupuesto vs real"]]],
+    ["costos", "Costos y compras", [...par([["comp", "Costos compartidos"], ["emp", "Gastos de la empresa"], ["compras", "Compras de la empresa"]], admin), ["per", "Pagos al personal"]]],
+  ];
+  const [c, setC] = useState("panel"), [subs, setSubs] = useState<Record<string, string>>({});
+  const carpeta = carpetas.find(x => x[0] === c) || carpetas[0], sub = subs[carpeta[0]] || carpeta[2][0][0], clave = carpeta[0] + ":" + sub;
+  return <>
+    <h1>Finanzas</h1>
+    <Tabs items={carpetas.map(x => [x[0], x[1]] as [string, string])} valor={carpeta[0]} onChange={setC} />
+    {carpeta[2].length > 1 && <div className="subtabs">{carpeta[2].map(([k, l]) => <button key={k} className={sub === k ? "on" : ""} onClick={() => setSubs({ ...subs, [carpeta[0]]: k })}>{l}</button>)}</div>}
+    {clave === "panel:rent" && <Rentabilidad />}
+    {clave === "panel:mov" && <IngresosGastos />}
+    {clave === "inv:inv" && <Inversores />}
+    {clave === "inv:rep" && <RepartoUtilidades />}
+    {clave === "inv:soc" && <SociosPorcentajes />}
+    {clave === "inv:fon" && <CajaFondos />}
+    {clave === "inv:mi" && <MiReparto />}
+    {clave === "sim:sim" && <Simulador />}
+    {clave === "sim:pre" && <Presupuesto />}
+    {clave === "sim:vs" && <PresupuestoVsReal />}
+    {clave === "costos:comp" && <CostosCompartidos />}
+    {clave === "costos:emp" && <GastosEmpresa />}
+    {clave === "costos:compras" && <Compras />}
+    {clave === "costos:per" && <Crud titulo="Pagos hechos al personal (respaldo)" tabla="pagos_personal" conZona orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "trabajador", l: "Trabajador", req: true }, { k: "concepto", l: "Concepto", t: "select", opts: ["Jornal", "Pago de viaje", "Viáticos", "Bono", "Adelanto", "Otro"], def: "Jornal" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "nota", l: "Nota" }, { k: "comprobante_path", l: "Respaldo (foto del recibo)", t: "archivo" }]} columnas={["fecha", "trabajador", "concepto", "monto", "nota"]} tfoot={f => <b>Total: {bs(f.reduce((s, x) => s + +x.monto, 0))}</b>} />}
   </>;
-}
-
-function Resumen() {
-  const { proyectoId } = useApp(), al = useAlcance(), q = useQuery(() => al(supabase.from("v_resumen_mensual").select("*").order("mes", { ascending: false }).limit(120), false), [proyectoId]);
-  const por: any = {}; ((q.data as any[]) || []).forEach(x => { const o = por[x.mes] || (por[x.mes] = { i: 0, c: 0, g: 0, v: 0 }); o.i += +x.ingresos_servicio; o.c += +x.cobrado; o.g += +x.gastos_operativos; o.v += +x.inversion; });
-  const ms = Object.keys(por).sort().reverse(), T = ms.reduce((a, m) => ({ i: a.i + por[m].i, c: a.c + por[m].c, g: a.g + por[m].g, v: a.v + por[m].v }), { i: 0, c: 0, g: 0, v: 0 });
-  return q.loading ? <Cargando /> : <><Aviso>El <b>ingreso del servicio</b> es lo que corresponde a cada mes (un pago adelantado no suma a los meses futuros). Lo <b>cobrado</b> es el dinero que entró. La <b>inversión (CAPEX)</b> va aparte y nunca resta del resultado operativo.</Aviso>
-    <div className="grid gk" style={{ marginBottom: 14 }}>{[["Ingresos del servicio", T.i], ["Cobrado", T.c], ["Gastos operativos", T.g], ["Resultado operativo", T.i - T.g], ["Inversión (CAPEX)", T.v]].map(([t, v]) => <div key={t as string} className="card kpi"><span>{t}</span><b>{bs(v)}</b></div>)}</div>
-    <div className="card tw"><h2>Por mes</h2>{ms.length ? <table><thead><tr><th>Mes</th><th>Ingreso del servicio</th><th>Cobrado</th><th>Gastos operativos</th><th>Resultado</th><th>Inversión</th></tr></thead><tbody>{ms.map(m => <tr key={m}><td>{nombreMes(m)}</td><td>{bs(por[m].i)}</td><td>{bs(por[m].c)}</td><td>{bs(por[m].g)}</td><td style={{ color: por[m].i - por[m].g >= 0 ? "var(--ok)" : "var(--bad)" }}><b>{bs(por[m].i - por[m].g)}</b></td><td>{bs(por[m].v)}</td></tr>)}</tbody></table> : <Vacio>Aún no hay datos. Se llena con los cargos, pagos y gastos que registres.</Vacio>}</div></>;
 }
 
 function Inversores() {

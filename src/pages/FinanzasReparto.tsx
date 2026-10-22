@@ -383,7 +383,7 @@ export function CajaFondos() {
   const quitar = async (m: any) => { if (!confirm("¿Mandar este movimiento a la papelera? Podrás recuperarlo desde el menú Papelera.")) return; try { await aPapelera("fondos_empresa", [m.id]); mov.recargar(); } catch (e: any) { setMsg(e.message); } };
   const ETIQ: Record<string, string> = { manual: "Manual", reparto: "Reparto", gasto_empresa: "Gasto de la empresa" };
   return <>
-    <Aviso>Estos son los fondos de <b>tu parte</b>. Los repartos confirmados suman aquí solos, y los gastos de la empresa pagados con un fondo se descuentan solos. Solo tú ves esta pantalla.</Aviso>
+    <Aviso>Estos son los fondos de <b>tu parte</b>: Caja chica, Ahorro, Inversión y Retiro del dueño. Anota aquí lo que entra y lo que sale de cada uno. Solo tú ves esta pantalla.</Aviso>
     {msg && <Aviso tipo="mal">{msg}</Aviso>}
     <div className="grid gk" style={{ marginBottom: 14 }}>{FONDOS.map(k => <Kpi key={k} t={k} v={bs(saldo(k))} c={saldo(k) < 0 ? "var(--bad)" : undefined} />)}</div>
     <div className="card"><h2>Registrar un movimiento a mano</h2><div className="form">

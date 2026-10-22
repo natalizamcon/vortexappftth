@@ -99,3 +99,14 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .barra-estados{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line);max-width:320px}.barra-estados i{display:block;height:100%}
 .ficha{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;font-size:13px}.ficha dt{color:var(--mute)}.ficha dd{margin:0}
 .cfg>h1:not(:first-child){display:none}
+
+/* ---------- Panel lateral (ficha de cliente, acciones de cobranza) ---------- */
+.drawer-fondo{position:fixed;inset:0;background:#10142c55;z-index:60;display:flex;justify-content:flex-end}
+.drawer{background:var(--panel);height:100%;box-shadow:-8px 0 28px #10142c40;padding:16px 18px;overflow:auto}
+.estados-barra{display:flex;gap:6px;flex-wrap:wrap}.estados-barra button{flex:1 1 130px;border:2px solid transparent;border-radius:99px;padding:9px 12px;font:inherit;font-weight:600;cursor:pointer}
+.estados-barra button.sel{border-color:var(--ink)}
+.mesx{display:inline-block;min-width:74px;text-align:center}
+.chip-pago{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px;min-width:92px}
+.chip-pago b{display:block;font-size:15px}.chip-pago small{color:var(--mute)}
+.chip-pago.cubierto{background:var(--okb);border-color:#b9e3c9}.chip-pago.parcial{background:var(--warnb);border-color:#ecd49a}.chip-pago.ya{background:#eef0f4}
+.ficha-sec{margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}

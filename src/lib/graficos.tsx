@@ -9,8 +9,9 @@ export function BarrasAgrupadas({ etiquetas, series, totales, alto = 250, fmt = 
   const W = 640, H = alto, pl = 46, pr = 10, pt = totales ? 24 : 12, pb = 26, n = Math.max(1, etiquetas.length);
   const todos = series.flatMap(s => s.datos), lo = Math.min(0, ...todos), hiRaw = Math.max(0, ...todos), hi = hiRaw === lo ? lo + 1 : hiRaw;
   const y = (v: number) => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo)), gw = (W - pl - pr) / n, bw = Math.min(24, (gw * 0.78) / Math.max(1, series.length)), cada = Math.ceil(n / 12);
+  const ent = todos.every(Number.isInteger) && hi - lo >= 1 && hi - lo <= 8, nt = ent ? hi - lo : 4;
   return <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }} role="img" aria-label="Gráfico de barras">
-    {[0, 1, 2, 3, 4].map(k => { const v = lo + ((hi - lo) * k) / 4; return <g key={k}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--line)" /><text x={pl - 6} y={y(v) + 4} textAnchor="end" fontSize="10" fill="var(--mute)">{fmtk(v)}</text></g>; })}
+    {Array.from({ length: nt + 1 }, (_, k) => k).map(k => { const v = lo + ((hi - lo) * k) / nt; return <g key={k}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--line)" /><text x={pl - 6} y={y(v) + 4} textAnchor="end" fontSize="10" fill="var(--mute)">{fmtk(v)}</text></g>; })}
     <line x1={pl} x2={W - pr} y1={y(0)} y2={y(0)} stroke="var(--ink)" strokeWidth="1.2" />
     {etiquetas.map((e, i) => {
       const x0 = pl + i * gw + (gw - bw * series.length) / 2, tope = Math.min(...series.map(s => y(s.datos[i] ?? 0)));

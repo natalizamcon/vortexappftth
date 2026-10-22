@@ -6,7 +6,6 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Zonas from "./pages/Zonas";
 import Clientes from "./pages/Clientes";
-import Cobranzas from "./pages/Cobranzas";
 import Red from "./pages/Red";
 import Campo from "./pages/Campo";
 import Inventario from "./pages/Inventario";
@@ -20,7 +19,7 @@ import Reportes from "./pages/Reportes";
 import { AlertasProvider, ContadorAlertas } from "./lib/alertas";
 
 const RUTAS: [string, string, string[] | null][] = [
-  ["dashboard", "Dashboard", null], ["red", "Red", null], ["alertas", "Alertas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
+  ["dashboard", "Dashboard", null], ["red", "Red", null], ["clientes", "Clientes", null], ["alertas", "Alertas", null],
   ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["formularios", "Formularios", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["reportes", "Reportes", null], ["configuracion", "Configuración", ["admin"]],
 ];
 const CONFIG = ["configuracion", "zonas", "usuarios", "papelera"];
@@ -38,13 +37,13 @@ export default function App() {
   const pagina = () => {
     switch (ruta) {
       case "configuracion": case "zonas": case "usuarios": case "papelera": return perfil.rol === "admin" ? <Configuracion inicial={ruta === "configuracion" ? undefined : ruta} /> : <Dashboard />;
-      case "clientes": return <Clientes />; case "cobranzas": return <Cobranzas />; case "red": return <Red />;
+      case "clientes": case "cobranzas": return <Clientes inicial={ruta === "cobranzas" ? "cobranzas" : undefined} />; case "red": return <Red />;
       case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
       default: return <Dashboard />;
     }
   };
   return <AlertasProvider>
-    <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k || (k === "configuracion" && CONFIG.includes(ruta)) ? "on" : ""}>{l}{k === "alertas" && <ContadorAlertas />}</a>)}</nav></div></header>
+    <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k || (k === "clientes" && ruta === "cobranzas") || (k === "configuracion" && CONFIG.includes(ruta)) ? "on" : ""}>{l}{k === "alertas" && <ContadorAlertas />}</a>)}</nav></div></header>
     <div className="barra">
       {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los espacios" : "Todos mis espacios"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
       <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>

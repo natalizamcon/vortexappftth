@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 19 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 20 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -107,4 +107,8 @@ select n, comprobacion, resultado, estado from (
                and (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_historial_red') = 1
                and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name = 'splitter') = 1
               then 'OK' else 'FALTA: ejecuta 13_red_como_prototipo.sql' end
+  union all
+  select 20, 'Clientes como en el prototipo (archivo 14)',
+         (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_comportamiento','v_aplicaciones','v_pagos_registro'))::text,
+         case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_comportamiento','v_aplicaciones','v_pagos_registro')) = 3 then 'OK' else 'FALTA: ejecuta 14_clientes_como_prototipo.sql' end
 ) r order by n;

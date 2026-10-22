@@ -153,3 +153,11 @@ git push origin main
 3. **Red tiene 7 pestañas:** Panel de red · Costos fijos · Costos variables · Red y NAP · Troncales y postes · Mapa · Historial de la red. Se quitó OLT y PON de la pantalla.
 4. **Finanzas:** Pagos al personal como en el prototipo; Caja y fondos incluye el reparto del mes con porcentajes de socios para ese mes (ya no existen "Reparto de utilidades" ni "Socios y porcentajes" como pestañas); Presupuesto de la zona con barras de avance; Ingresos y gastos con rango de fechas.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 19 filas en OK.
+
+### Novedades de la 2.2 · Clientes como en el prototipo
+1. En Supabase → SQL Editor ejecuta `sql/14_clientes_como_prototipo.sql` (solo crea 3 vistas de lectura; va después del 13).
+2. **Clientes** quedó después de Red y reúne 6 pestañas: Panel de clientes · Clientes · Paquetes · Cobranzas · Pagos · Registro de pagos. Cobranzas ya no es un menú aparte.
+3. Al tocar un cliente se abre su **ficha** al costado, con la marca de **usuario conflictivo**. Las acciones de cobranza (Pago, No cortar, Suspender, Cortar por falta de pago, Reconectar) también se abren al costado.
+4. **Paquetes:** los cambios de velocidad, precio, activo y día de corte solo se aplican con el botón **Efectuar cambios**.
+5. **Pagos:** al escribir el monto se ve en vivo a qué meses se aplica.
+6. `sql/3_verificar_instalacion.sql` ahora tiene 20 filas en OK.

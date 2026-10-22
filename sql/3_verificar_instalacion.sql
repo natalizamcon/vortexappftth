@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 15 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 16 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -75,4 +75,11 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('olts','puertos_pon','troncales','hilos','fusiones','postes')) = 6
                and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_troncales_resumen','v_olts_resumen','v_puertos_pon','v_fusiones')) = 4
               then 'OK' else 'FALTA: ejecuta 9_red_completa.sql' end
+  union all
+  select 16, 'Finanzas: reparto, costos compartidos, gastos de la empresa (archivo 10)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('zona_socios','zona_fondos_pct','costos_compartidos','costos_compartidos_zonas','costos_compartidos_meses','gastos_empresa','fondos_empresa','liquidaciones','liquidacion_socios','liquidacion_fondos'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_gasto_empresa','confirmar_liquidacion','anular_liquidacion','marcar_pago_socio')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('zona_socios','zona_fondos_pct','costos_compartidos','costos_compartidos_zonas','costos_compartidos_meses','gastos_empresa','fondos_empresa','liquidaciones','liquidacion_socios','liquidacion_fondos')) = 10
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_gasto_empresa','confirmar_liquidacion','anular_liquidacion','marcar_pago_socio')) = 4
+              then 'OK' else 'FALTA: ejecuta 10_finanzas_reparto.sql' end
 ) r order by n;

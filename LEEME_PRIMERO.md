@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.8 · Red completa, reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 1.9 · Finanzas (reparto de utilidades), red completa, reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -128,3 +128,10 @@ git push origin main
 3. Troncales, fusiones, postes y OLT van **"A la papelera"** (se restauran desde el menú Papelera).
 4. Nuevas alertas (troncales sin hilos libres, fusiones con pérdida alta) y un reporte de utilización de troncales (ahora 12 reportes).
 5. `sql/3_verificar_instalacion.sql` ahora tiene 15 filas en OK.
+
+### Novedades de la 1.9 · Finanzas
+1. En Supabase → SQL Editor ejecuta `sql/10_finanzas_reparto.sql` (es seguro, no borra datos; pasa tus movimientos de fondos al nuevo sistema).
+2. Finanzas (administrador): **Reparto de utilidades**, **Socios y porcentajes**, **Costos compartidos**, **Gastos de la empresa** y **Caja y fondos** (ahora de la empresa).
+3. Finanzas (socio): pestaña **Mi reparto**.
+4. Utilidad = cobrado − gastos operativos − costos compartidos − pagos a inversores. Primero los socios, y lo que queda para el dueño se divide en los 4 fondos.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 16 filas en OK.

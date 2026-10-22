@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "./supabase";
 import { useApp } from "./auth";
 import { bs, hoy, useAlcance } from "./ui";
+import { mesAnterior, rangoMes } from "./reparto";
 
 export type Nivel = "critica" | "atencion" | "info";
 export type Area = "Cobranza" | "Red" | "Operación" | "Inventario" | "Finanzas";
@@ -22,7 +23,7 @@ export const useAlertas = () => useContext(C);
 
 /** Calcula las alertas con los datos que cada persona tiene permiso de ver. Todo se calcula al momento. */
 export function AlertasProvider({ children }: { children: ReactNode }) {
-  const { zonas, proyectoId, zonaId } = useApp(), al = useAlcance();
+  const { zonas, proyectoId, zonaId, perfil } = useApp(), al = useAlcance();
   const [alertas, setAlertas] = useState<Alerta[]>([]), [cargando, setCargando] = useState(true), [t, setT] = useState(0), [cuando, setCuando] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
       try {
         const H = hoy(), zv = zonas.filter(z => (!proyectoId || z.proyecto_id === proyectoId) && (!zonaId || z.id === zonaId));
         const zn = (id: string) => (zv.length > 1 ? ` · ${zonas.find(z => z.id === id)?.nombre || ""}` : "");
-        const [venc, porv, noc, naps, resv, mant, viajes, mats, stock, inv, pinv, pre, fin, resCli, trs, fusAlt] = await Promise.all([
+        const esAdmin = perfil?.rol === "admin", [prevIni] = rangoMes(mesAnterior(H)), sinDatos = Promise.resolve({ data: [], error: null });
+        const [venc, porv, noc, naps, resv, mant, viajes, mats, stock, inv, pinv, pre, fin, resCli, trs, fusAlt, liqPrev, pagosSocio] = await Promise.all([
           al(supabase.from("v_cobranza").select("nombre, meses_deuda, deuda, zona_id", { count: "exact" }).eq("estado_cuenta", "VENCIDO").order("deuda", { ascending: false }).limit(100)),
           al(supabase.from("v_cobranza").select("nombre, zona_id", { count: "exact" }).eq("estado_cuenta", "POR VENCER").limit(100)),
           al(supabase.from("clientes").select("nombre, no_cortar_hasta, zona_id").eq("no_cortar", true).neq("estado", "BAJA").not("no_cortar_hasta", "is", null).lte("no_cortar_hasta", mas(3)).order("no_cortar_hasta").limit(100)),
@@ -49,6 +51,8 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
           al(supabase.from("v_cobranza_resumen").select("zona_id, estado_cuenta, clientes")),
           al(supabase.from("v_troncales_resumen").select("codigo, zona_id, total, libres, danados").limit(300)),
           al(supabase.from("v_fusiones").select("troncal_codigo, hilo_entrada, perdida_db, zona_id").gt("perdida_db", 0.3).limit(100)),
+          esAdmin ? al(supabase.from("v_liquidaciones").select("zona_id").eq("estado", "CONFIRMADA").eq("periodo", prevIni).limit(500)) : sinDatos,
+          esAdmin ? (() => { let q = supabase.from("v_reparto_socios").select("socio_nombre, zona_id, monto, periodo, fecha_reparto").eq("estado", "CONFIRMADA").is("pagado_en", null).lt("fecha_reparto", mas(-15)).limit(100); if (zonaId) q = q.eq("zona_id", zonaId); return q; })() : sinDatos,
         ]);
         const A: Alerta[] = [];
 
@@ -124,6 +128,13 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
         });
         if (pasan.length) A.push({ id: "presu", area: "Finanzas", ruta: "finanzas", nivel: pasan.some(x => x.nivel === "critica") ? "critica" : "atencion", titulo: `${plural(pasan.length, "presupuesto excedido", "presupuestos excedidos")}`, detalle: lista(pasan.map(x => x.t)) });
 
+        if (esAdmin) {
+          const hechas = new Set(dat(liqPrev).map(x => x.zona_id)), [, finPrev] = rangoMes(mesAnterior(H));
+          const faltan = zv.filter(z => (z.fecha_inicio || "0000") <= finPrev && !hechas.has(z.id));
+          if (faltan.length) A.push({ id: "repartoPend", area: "Finanzas", ruta: "finanzas", nivel: +H.slice(8, 10) >= 10 ? "atencion" : "info", titulo: `${plural(faltan.length, "zona sin reparto de", "zonas sin reparto de")} ${mesAnterior(H)}`, detalle: lista(faltan.map(z => z.nombre)) });
+          const PS = dat(pagosSocio);
+          if (PS.length) A.push({ id: "pagoSocio", area: "Finanzas", ruta: "finanzas", nivel: "atencion", titulo: `${plural(PS.length, "pago a socio pendiente hace más de 15 días", "pagos a socios pendientes hace más de 15 días")}`, detalle: lista(PS.map(x => `${x.socio_nombre}${zn(x.zona_id)} · ${bs(x.monto)} · reparto de ${String(x.periodo).slice(0, 7)}`)) });
+        }
         const peso = { critica: 0, atencion: 1, info: 2 };
         A.sort((a, b) => peso[a.nivel] - peso[b.nivel]);
         if (!cancelado) { setAlertas(A); setCuando(new Date()); }

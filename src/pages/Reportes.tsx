@@ -111,6 +111,20 @@ const REPORTES: Rep[] = [
         filas: Object.values(g).sort((a, b) => orden.indexOf(a.tipo) - orden.indexOf(b.tipo) || b.m - a.m).map(x => [T[x.tipo] || x.tipo, x.cat, x.k, x.m]), total: ["Total", "", R.length, ing + gas + inv],
         nota: `Ingresos ${bs(ing)} · Gastos operativos ${bs(gas)} · Inversión ${bs(inv)} · Resultado operativo (ingresos − gastos operativos): ${bs(ing - gas)}.` };
     } },
+  { id: "reparto", nombre: "Reparto de utilidades", desc: "Repartos confirmados: utilidad de cada zona y cuánto fue a los socios y a ti. Solo lo ve el administrador (cada socio ve lo suyo en Finanzas).", fechas: true,
+    run: async c => {
+      const R = await todas(() => c.al(supabase.from("v_liquidaciones").select("*").eq("estado", "CONFIRMADA").gte("periodo", c.desde.slice(0, 7) + "-01").lte("periodo", c.hasta).order("periodo")));
+      const t = (k: string) => suma(R, k);
+      return { cols: [{ t: "Mes" }, { t: "Zona" }, { t: "Cobrado", f: "bs" }, { t: "Gastos", f: "bs" }, { t: "Compartidos", f: "bs" }, { t: "Inversores", f: "bs" }, { t: "Utilidad", f: "bs" }, { t: "Repartido", f: "bs" }, { t: "Socios", f: "bs" }, { t: "Tu parte", f: "bs" }],
+        filas: R.map(r => [nombreMes(String(r.periodo).slice(0, 7) + "-01"), r.zona_nombre, n(r.cobrado) + n(r.otros_ingresos), n(r.gastos_operativos), n(r.costos_compartidos), n(r.pagos_inversores), n(r.utilidad), n(r.monto_repartido), n(r.total_socios), n(r.parte_dueno)]),
+        total: ["Total", "", t("cobrado") + t("otros_ingresos"), t("gastos_operativos"), t("costos_compartidos"), t("pagos_inversores"), t("utilidad"), t("monto_repartido"), t("total_socios"), t("parte_dueno")], nota: "El mes es el período que se repartió. El cobrado incluye otros ingresos." };
+    } },
+  { id: "gastosempresa", nombre: "Gastos de la empresa", desc: "Gastos que no pertenecen a ninguna zona, por categoría. Solo lo ve el administrador.", fechas: true,
+    run: async c => {
+      const R = await todas(() => supabase.from("gastos_empresa").select("categoria, monto").gte("fecha", c.desde).lte("fecha", c.hasta));
+      const g: Record<string, { k: number; m: number }> = {}; R.forEach(r => { (g[r.categoria] = g[r.categoria] || { k: 0, m: 0 }).k++; g[r.categoria].m += n(r.monto); });
+      return { cols: [{ t: "Categoría" }, { t: "Gastos", f: "n" }, { t: "Monto", f: "bs" }], filas: Object.entries(g).sort((a, b) => b[1].m - a[1].m).map(([k, v]) => [k, v.k, v.m]), total: ["Total", R.length, suma(R, "monto")] };
+    } },
   { id: "equipos", nombre: "Equipos por estado", desc: "Cuántos equipos con número de serie hay en almacén, instalados, en mantenimiento o descartados.", fechas: false,
     run: async c => {
       const R = await todas(() => c.al(supabase.from("equipos_serie").select("estado"), false)), g: Record<string, number> = {}; R.forEach(r => { g[r.estado] = (g[r.estado] || 0) + 1; });

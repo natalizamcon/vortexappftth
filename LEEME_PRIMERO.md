@@ -70,3 +70,30 @@ Simulador de proyecto y guía de presupuesto · Centro de alertas · Paneles ope
 ## Notas
 - La pantalla muestra hasta 1.000 filas por lista (límite normal de Supabase). Para más, se agrega paginación.
 - Esta carpeta fue revisada (sintaxis y estructura del SQL), pero no pude instalarla ni ejecutarla aquí. Si Netlify muestra un error al publicar, mándame el texto del error y lo corrijo.
+
+---
+## ACTUALIZACIONES (con Git)
+Cada vez que recibas una versión nueva:
+1. Descomprime `vortex-actualizacion-….zip` y copia su contenido **encima** de tu carpeta del proyecto (no incluye `src/config.ts`, así tus claves no se pisan).
+2. En la terminal, dentro de la carpeta del proyecto:
+```
+git status
+git add .
+git commit -m "Actualización: descripción corta"
+git push origin main
+```
+3. Netlify publica solo en 1–2 minutos. Si trae un archivo SQL nuevo, pégalo antes en el SQL Editor de Supabase.
+4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
+
+---
+## VERSIÓN 1.3 · Crear zona paso a paso, socios por zona, simulador y presupuesto
+1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
+2. Sube los archivos nuevos con Git (pasos de arriba).
+3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
+4. Para comprobar: ejecuta `sql/3_verificar_instalacion.sql`; ahora deben salir 10 filas en OK.
+
+### Novedades de la 1.3
+1. En Supabase → SQL Editor ejecuta, en este orden y solo si no lo hiciste: `sql/4_simulador_presupuesto.sql` y luego `sql/5_zonas_y_socios.sql`.
+2. Menú **Zonas → + Crear zona**: asistente de 8 pasos (datos, socios, inversores, planes, red, costos fijos, meta, resumen).
+3. En una zona "con socios", el botón **Socios** permite dar o quitar acceso cuando quieras.
+4. `sql/3_verificar_instalacion.sql` ahora tiene 11 filas; todas deben decir OK.

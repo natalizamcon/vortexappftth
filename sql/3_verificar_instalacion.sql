@@ -1,0 +1,55 @@
+-- =====================================================================
+--  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 11 filas.
+-- =====================================================================
+select n, comprobacion, resultado, estado from (
+  select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
+         (select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE')::text as resultado,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE') >= 31 then 'OK' else 'FALTA' end as estado
+  union all
+  select 2, 'Tablas con seguridad por filas activada (31)',
+         (select count(*) from pg_tables where schemaname = 'public' and rowsecurity)::text,
+         case when (select count(*) from pg_tables where schemaname = 'public' and rowsecurity) >= 31 then 'OK' else 'FALTA' end
+  union all
+  select 3, 'Funciones del sistema (23)',
+         (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in
+           ('es_admin','mi_rol','puede_ver','puede_rol','puede_escribir','puede_finanzas','puede_ver_texto','puede_escribir_texto','heredar_proyecto','al_crear_usuario','al_crear_proyecto','al_crear_zona','al_crear_nap','auditar',
+            'crear_cliente_instalacion','registrar_pago','anular_pago','generar_cargos','cambiar_estado_cliente','dar_baja','registrar_movimiento','admin_guardar_usuario','hacer_admin'))::text,
+         case when (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in
+           ('es_admin','mi_rol','puede_ver','puede_rol','puede_escribir','puede_finanzas','puede_ver_texto','puede_escribir_texto','heredar_proyecto','al_crear_usuario','al_crear_proyecto','al_crear_zona','al_crear_nap','auditar',
+            'crear_cliente_instalacion','registrar_pago','anular_pago','generar_cargos','cambiar_estado_cliente','dar_baja','registrar_movimiento','admin_guardar_usuario','hacer_admin')) = 23 then 'OK' else 'FALTA' end
+  union all
+  select 4, 'Vistas de cobranza y resumen (5)',
+         (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_cargos','v_cobranza','v_resumen_mensual','v_cobranza_resumen','v_puertos_resumen'))::text,
+         case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_cargos','v_cobranza','v_resumen_mensual','v_cobranza_resumen','v_puertos_resumen')) = 5 then 'OK' else 'FALTA' end
+  union all
+  select 5, 'Carpetas privadas de archivos (comprobantes y fotos)',
+         (select count(*) from storage.buckets where id in ('comprobantes','fotos') and not public)::text,
+         case when (select count(*) from storage.buckets where id in ('comprobantes','fotos') and not public) = 2 then 'OK' else 'FALTA: créalas en Storage, privadas' end
+  union all
+  select 6, 'Reglas de acceso a archivos',
+         (select count(*) from pg_policies where schemaname = 'storage' and policyname like 'vortex_%')::text,
+         case when (select count(*) from pg_policies where schemaname = 'storage' and policyname like 'vortex_%') = 3 then 'OK' else 'FALTA' end
+  union all
+  select 7, 'Alta automática de perfil al crear usuarios',
+         (select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace s on s.oid = c.relnamespace where s.nspname = 'auth' and c.relname = 'users' and t.tgname = 'on_auth_user_created')::text,
+         case when (select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace s on s.oid = c.relnamespace where s.nspname = 'auth' and c.relname = 'users' and t.tgname = 'on_auth_user_created') = 1 then 'OK' else 'FALTA' end
+  union all
+  select 8, 'Administradores activos (debe haber al menos 1)',
+         (select count(*) from public.profiles where rol = 'admin' and activo)::text,
+         case when (select count(*) from public.profiles where rol = 'admin' and activo) >= 1 then 'OK' else 'FALTA: ejecuta 2_hacer_administrador.sql' end
+  union all
+  select 9, 'Acceso público sin sesión a las tablas (debe ser 0)',
+         (select count(*) from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public')::text,
+         case when (select count(*) from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public') = 0 then 'OK' else 'REVISAR' end
+  union all
+  select 10, 'Simulador y presupuesto (2 tablas, archivo 4)',
+         (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('simulaciones','presupuesto_lineas'))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('simulaciones','presupuesto_lineas')) = 2 then 'OK' else 'FALTA: ejecuta 4_simulador_presupuesto.sql' end
+  union all
+  select 11, 'Crear zona paso a paso y socios por zona (archivo 5)',
+         ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_zona_completa','dar_acceso_zona'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios'))::text,
+         case when ((select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_zona_completa','dar_acceso_zona'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'zonas' and column_name = 'con_socios')) = 3 then 'OK' else 'FALTA: ejecuta 5_zonas_y_socios.sql' end
+) r order by n;

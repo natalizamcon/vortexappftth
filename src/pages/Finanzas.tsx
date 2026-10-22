@@ -3,12 +3,16 @@ import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Tabs, Vacio, bs, hoy, nombreMes, useAlcance, useQuery } from "../lib/ui";
 import Crud from "../lib/crud";
+import { Presupuesto, PresupuestoVsReal, Simulador } from "./Presupuesto";
 
 export default function Finanzas() {
   const [tab, setTab] = useState("res");
-  return <><h1>Finanzas</h1><Tabs items={[["res", "Resumen"], ["mov", "Ingresos y gastos"], ["inv", "Inversores"], ["per", "Pagos al personal"], ["fon", "Caja y fondos"]]} valor={tab} onChange={setTab} />
+  return <><h1>Finanzas</h1><Tabs items={[["res", "Resumen"], ["mov", "Ingresos y gastos"], ["sim", "Simulador"], ["pre", "Presupuesto"], ["vs", "Presupuesto vs real"], ["inv", "Inversores"], ["per", "Pagos al personal"], ["fon", "Caja y fondos"]]} valor={tab} onChange={setTab} />
     {tab === "res" && <Resumen />}
-    {tab === "mov" && <Crud titulo="Ingresos, gastos operativos e inversiones" tabla="fin_movimientos" orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "tipo", l: "Tipo", t: "select", opts: ["INGRESO", "GASTO_OPERATIVO", "INVERSION"], req: true }, { k: "categoria", l: "Categoría (Starlink, materiales…)" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "descripcion", l: "Descripción" }, { k: "comprobante_path", l: "Comprobante", t: "archivo" }]} columnas={["fecha", "tipo", "categoria", "monto", "descripcion"]} />}
+    {tab === "mov" && <Crud titulo="Ingresos, gastos operativos e inversiones (si eliges una zona arriba, el registro queda en esa zona)" tabla="fin_movimientos" orden="fecha" conZona="opcional" select="*, zonas(nombre)" extra={f => <span className="mute">{f.zonas?.nombre || "Todo el proyecto"}</span>} campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "tipo", l: "Tipo", t: "select", opts: ["INGRESO", "GASTO_OPERATIVO", "INVERSION"], req: true }, { k: "categoria", l: "Categoría (Starlink, materiales…)" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "descripcion", l: "Descripción" }, { k: "comprobante_path", l: "Comprobante", t: "archivo" }]} columnas={["fecha", "tipo", "categoria", "monto", "descripcion"]} />}
+    {tab === "sim" && <Simulador />}
+    {tab === "pre" && <Presupuesto />}
+    {tab === "vs" && <PresupuestoVsReal />}
     {tab === "inv" && <Inversores />}
     {tab === "per" && <Crud titulo="Pagos hechos al personal (respaldo)" tabla="pagos_personal" conZona orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "trabajador", l: "Trabajador", req: true }, { k: "concepto", l: "Concepto", t: "select", opts: ["Jornal", "Pago de viaje", "Viáticos", "Bono", "Adelanto", "Otro"], def: "Jornal" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "nota", l: "Nota" }, { k: "comprobante_path", l: "Respaldo (foto del recibo)", t: "archivo" }]} columnas={["fecha", "trabajador", "concepto", "monto", "nota"]} tfoot={f => <b>Total: {bs(f.reduce((s, x) => s + +x.monto, 0))}</b>} />}
     {tab === "fon" && <Crud titulo="Caja chica, ahorro, inversión y retiros del dueño" tabla="fondos_movimientos" orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "fondo", l: "Fondo", t: "select", opts: ["Caja chica", "Ahorro", "Inversión", "Retiro del dueño"], req: true }, { k: "tipo", l: "Tipo", t: "select", opts: ["Aporte", "Gasto"], req: true }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "nota", l: "Nota" }]} columnas={["fecha", "fondo", "tipo", "monto", "nota"]}

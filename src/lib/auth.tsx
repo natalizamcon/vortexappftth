@@ -25,7 +25,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   useEffect(() => {
     recargar();
-    const { data } = supabase.auth.onAuthStateChange(() => { recargar(); });
+    // Se recarga fuera del evento para evitar bloqueos internos de Supabase.
+    const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(() => { recargar(); }, 0); });
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => { localStorage.setItem("vx_proy", proyectoId); }, [proyectoId]);

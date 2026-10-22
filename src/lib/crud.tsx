@@ -5,7 +5,7 @@ import { Aviso, Campo, Vacio, Cargando, useQuery, useAlcance, hoy } from "./ui";
 
 export type CampoDef = { k: string; l: string; t?: "text" | "number" | "date" | "select" | "archivo" | "check"; opts?: string[]; bucket?: "comprobantes" | "fotos"; req?: boolean; def?: any };
 type Props = {
-  titulo: string; tabla: string; campos: CampoDef[]; columnas?: string[]; conZona?: boolean; orden?: string; select?: string;
+  titulo: string; tabla: string; campos: CampoDef[]; columnas?: string[]; conZona?: boolean | "opcional"; orden?: string; select?: string;
   extra?: (fila: any) => any; tfoot?: (filas: any[]) => any; editable?: boolean;
 };
 
@@ -21,8 +21,8 @@ export default function Crud({ titulo, tabla, campos, columnas, conZona, orden =
     try {
       const zona = zonas.find(z => z.id === zonaId);
       const pid = zona?.proyecto_id || proyectoId || (proyectos.length === 1 ? proyectos[0].id : "");
-      if (conZona && !zonaId) throw new Error("Elige una zona arriba.");
-      if (!pid) throw new Error("Elige un proyecto arriba.");
+      if (conZona === true && !zonaId) throw new Error("Elige una zona arriba.");
+      if (!pid) throw new Error("Primero crea una zona en el menú Zonas.");
       const fila: any = {};
       for (const c of campos) {
         let x = v[c.k];
@@ -32,7 +32,7 @@ export default function Crud({ titulo, tabla, campos, columnas, conZona, orden =
         fila[c.k] = x === "" ? null : x;
       }
       fila.proyecto_id = pid;
-      if (conZona) fila.zona_id = zonaId;
+      if (conZona) fila.zona_id = zonaId || null;
       const { error } = await supabase.from(tabla).insert(fila);
       if (error) throw new Error(error.message);
       setV(vacio()); setOk("Guardado."); q.recargar();

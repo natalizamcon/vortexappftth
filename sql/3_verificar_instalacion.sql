@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 14 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 15 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -68,4 +68,11 @@ select n, comprobacion, resultado, estado from (
   select 14, 'Reportes (archivo 8)',
          (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_pagos','v_instalaciones'))::text,
          case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_pagos','v_instalaciones')) = 2 then 'OK' else 'FALTA: ejecuta 8_reportes.sql' end
+  union all
+  select 15, 'Red completa: troncales, hilos, fusiones, postes, OLT y PON (archivo 9)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('olts','puertos_pon','troncales','hilos','fusiones','postes'))
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_troncales_resumen','v_olts_resumen','v_puertos_pon','v_fusiones')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('olts','puertos_pon','troncales','hilos','fusiones','postes')) = 6
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_troncales_resumen','v_olts_resumen','v_puertos_pon','v_fusiones')) = 4
+              then 'OK' else 'FALTA: ejecuta 9_red_completa.sql' end
 ) r order by n;

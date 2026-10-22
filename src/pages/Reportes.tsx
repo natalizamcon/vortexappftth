@@ -73,6 +73,13 @@ const REPORTES: Rep[] = [
         filas: R.map(r => [r.codigo, c.nz(r.zona_id), r.tipo, n(r.total), n(r.ocupados), n(r.reservados), n(r.danados), n(r.libres), pct(n(r.ocupados), n(r.total))]),
         total: ["Total", "", "", t("total"), t("ocupados"), t("reservados"), t("danados"), t("libres"), pct(t("ocupados"), t("total"))] };
     } },
+  { id: "troncales", nombre: "Utilización de troncales", desc: "Hilos utilizados, reservados, dañados y libres de cada troncal.", fechas: false,
+    run: async c => {
+      const R = await todas(() => c.al(supabase.from("v_troncales_resumen").select("*").order("codigo"))), t = (k: string) => suma(R, k);
+      return { cols: [{ t: "Troncal" }, { t: "Zona" }, { t: "Recorrido" }, { t: "Fibra" }, { t: "Km", f: "n" }, { t: "Hilos", f: "n" }, { t: "Utilizados", f: "n" }, { t: "Reservados", f: "n" }, { t: "Dañados", f: "n" }, { t: "Libres", f: "n" }, { t: "Utilización", f: "pct" }],
+        filas: R.map(r => [r.codigo, c.nz(r.zona_id), [r.desde, r.hasta].filter(Boolean).join(" → "), r.tipo_fibra, n(r.longitud_km), n(r.total), n(r.utilizados), n(r.reservados), n(r.danados), n(r.libres), pct(n(r.utilizados), n(r.total))]),
+        total: ["Total", "", "", "", t("longitud_km"), t("total"), t("utilizados"), t("reservados"), t("danados"), t("libres"), pct(t("utilizados"), t("total"))] };
+    } },
   { id: "instalaciones", nombre: "Instalaciones realizadas", desc: "Instalaciones del período con su costo de materiales y mano de obra.", fechas: true,
     run: async c => {
       const R = await todas(() => c.al(supabase.from("v_instalaciones").select("fecha, tecnico, costo_materiales, mano_obra, cliente_codigo, cliente_nombre, zona_id").gte("fecha", c.desde).lte("fecha", c.hasta).order("fecha")));

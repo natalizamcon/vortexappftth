@@ -17,6 +17,10 @@ const TIPOS: Record<string, [string, (d: any) => string]> = {
   presupuesto_lineas: ["Línea de presupuesto", d => `${d.concepto} · ${bs(Number(d.cantidad) * Number(d.monto_unitario))}`],
   simulaciones: ["Simulación", d => d.nombre],
   inversores: ["Inversor", d => `${d.nombre} · ${bs(d.monto)}`],
+  olts: ["OLT", d => `${d.nombre}${d.marca || d.modelo ? " · " + [d.marca, d.modelo].filter(Boolean).join(" ") : ""}`],
+  troncales: ["Troncal", d => `${d.codigo} · ${[d.desde, d.hasta].filter(Boolean).join(" → ") || "sin recorrido"} · ${d.hilos} hilos`],
+  fusiones: ["Fusión", d => `Hilo ${d.hilo_entrada ?? "?"}${d.caja_empalme ? " · " + d.caja_empalme : ""}${d.perdida_db != null ? " · " + d.perdida_db + " dB" : ""}`],
+  postes: ["Poste", d => `${d.codigo}${d.tipo ? " · " + d.tipo : ""}`],
 };
 
 export default function Papelera() {

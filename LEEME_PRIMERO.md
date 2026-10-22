@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.7 · Reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 1.8 · Red completa, reportes, formularios imprimibles y contrato, centro de alertas, papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -121,3 +121,10 @@ git push origin main
 1. En Supabase → SQL Editor ejecuta `sql/8_reportes.sql` (solo crea 2 vistas de lectura).
 2. Menú **Reportes**: 11 informes (morosidad, clientes con deuda, cobranza, planes, altas y bajas, NAP, instalaciones, mantenimientos, materiales, ingresos y gastos, equipos). Se pueden exportar a Excel o imprimir/guardar en PDF.
 3. `sql/3_verificar_instalacion.sql` ahora tiene 14 filas en OK.
+
+### Novedades de la 1.8 · Red completa
+1. En Supabase → SQL Editor ejecuta `sql/9_red_completa.sql` (es seguro, no borra datos).
+2. Menú **Red FTTH**: Panel de red, NAP y puertos, Troncales, Hilos y fusiones, Postes, OLT y PON, Historial.
+3. Troncales, fusiones, postes y OLT van **"A la papelera"** (se restauran desde el menú Papelera).
+4. Nuevas alertas (troncales sin hilos libres, fusiones con pérdida alta) y un reporte de utilización de troncales (ahora 12 reportes).
+5. `sql/3_verificar_instalacion.sql` ahora tiene 15 filas en OK.

@@ -32,7 +32,7 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
       try {
         const H = hoy(), zv = zonas.filter(z => (!proyectoId || z.proyecto_id === proyectoId) && (!zonaId || z.id === zonaId));
         const zn = (id: string) => (zv.length > 1 ? ` · ${zonas.find(z => z.id === id)?.nombre || ""}` : "");
-        const [venc, porv, noc, naps, resv, mant, viajes, mats, stock, inv, pinv, pre, fin, resCli] = await Promise.all([
+        const [venc, porv, noc, naps, resv, mant, viajes, mats, stock, inv, pinv, pre, fin, resCli, trs, fusAlt] = await Promise.all([
           al(supabase.from("v_cobranza").select("nombre, meses_deuda, deuda, zona_id", { count: "exact" }).eq("estado_cuenta", "VENCIDO").order("deuda", { ascending: false }).limit(100)),
           al(supabase.from("v_cobranza").select("nombre, zona_id", { count: "exact" }).eq("estado_cuenta", "POR VENCER").limit(100)),
           al(supabase.from("clientes").select("nombre, no_cortar_hasta, zona_id").eq("no_cortar", true).neq("estado", "BAJA").not("no_cortar_hasta", "is", null).lte("no_cortar_hasta", mas(3)).order("no_cortar_hasta").limit(100)),
@@ -47,6 +47,8 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
           al(supabase.from("presupuesto_lineas").select("zona_id, tipo, cantidad, monto_unitario, periodo").limit(3000)),
           al(supabase.from("fin_movimientos").select("zona_id, tipo, monto").in("tipo", ["INVERSION", "GASTO_OPERATIVO"]).not("zona_id", "is", null).limit(5000)),
           al(supabase.from("v_cobranza_resumen").select("zona_id, estado_cuenta, clientes")),
+          al(supabase.from("v_troncales_resumen").select("codigo, zona_id, total, libres, danados").limit(300)),
+          al(supabase.from("v_fusiones").select("troncal_codigo, hilo_entrada, perdida_db, zona_id").gt("perdida_db", 0.3).limit(100)),
         ]);
         const A: Alerta[] = [];
 
@@ -69,6 +71,11 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
         if (RV.length) A.push({ id: "resv", area: "Red", ruta: "red", nivel: "atencion", titulo: `${plural(RV.length, "reserva de puerto vencida", "reservas de puerto vencidas")}`, detalle: lista(RV.map(x => `${x.nap} puerto ${x.numero}${zn(x.zona_id)} · ${x.reservado_para || "sin nombre"} · venció el ${x.reservado_hasta}`)) });
         const dan = N.filter(x => n(x.danados) > 0);
         if (dan.length) A.push({ id: "dan", area: "Red", ruta: "red", nivel: "info", titulo: `${plural(dan.reduce((s, x) => s + n(x.danados), 0), "puerto dañado", "puertos dañados")}`, detalle: lista(dan.map(x => `${x.codigo}${zn(x.zona_id)} · ${n(x.danados)} dañado(s)`)) });
+
+        const TRs = dat(trs), tPoco = TRs.filter(x => n(x.libres) <= 2), tDan = TRs.filter(x => n(x.danados) > 0), FA = dat(fusAlt);
+        if (tPoco.length) A.push({ id: "tronLibres", area: "Red", ruta: "red", nivel: tPoco.some(x => n(x.libres) === 0) ? "critica" : "atencion", titulo: `${plural(tPoco.length, "troncal casi sin hilos libres", "troncales casi sin hilos libres")}`, detalle: lista(tPoco.map(x => `${x.codigo}${zn(x.zona_id)} · quedan ${n(x.libres)} de ${n(x.total)} hilos`)) });
+        if (tDan.length) A.push({ id: "tronDan", area: "Red", ruta: "red", nivel: "info", titulo: `${plural(tDan.reduce((s, x) => s + n(x.danados), 0), "hilo dañado", "hilos dañados")}`, detalle: lista(tDan.map(x => `${x.codigo}${zn(x.zona_id)} · ${n(x.danados)} dañado(s)`)) });
+        if (FA.length) A.push({ id: "fusAlta", area: "Red", ruta: "red", nivel: "atencion", titulo: `${plural(FA.length, "fusión con pérdida alta", "fusiones con pérdida alta")}`, detalle: lista(FA.map(x => `${x.troncal_codigo}${zn(x.zona_id)} · hilo ${x.hilo_entrada} · ${n(x.perdida_db).toFixed(2)} dB`)) });
 
         // ---------- OPERACIÓN ----------
         const M = dat(mant), mAtr = M.filter(x => x.fecha_programada && x.fecha_programada < H), mProx = M.filter(x => x.fecha_programada && x.fecha_programada >= H && x.fecha_programada <= mas(1));

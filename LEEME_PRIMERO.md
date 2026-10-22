@@ -86,7 +86,7 @@ git push origin main
 4. Para revisar que la base esté bien: ejecuta `sql/3_verificar_instalacion.sql` (todo debe decir OK).
 
 ---
-## VERSIÓN 1.3 · Crear zona paso a paso, socios por zona, simulador y presupuesto
+## VERSIÓN 1.4 · Papelera (nada se elimina), crear zona paso a paso, socios por zona, simulador y presupuesto
 1. **Primero la base de datos:** en Supabase → SQL Editor → New query, pega `sql/4_simulador_presupuesto.sql` y pulsa Run. (Es seguro, no cambia nada existente.)
 2. Sube los archivos nuevos con Git (pasos de arriba).
 3. En la app: **Finanzas → Simulador / Presupuesto / Presupuesto vs real**.
@@ -97,3 +97,10 @@ git push origin main
 2. Menú **Zonas → + Crear zona**: asistente de 8 pasos (datos, socios, inversores, planes, red, costos fijos, meta, resumen).
 3. En una zona "con socios", el botón **Socios** permite dar o quitar acceso cuando quieras.
 4. `sql/3_verificar_instalacion.sql` ahora tiene 11 filas; todas deben decir OK.
+
+### Novedades de la 1.4 · Papelera
+1. En Supabase → SQL Editor ejecuta `sql/6_papelera.sql` (es seguro, no borra datos).
+2. Zonas, espacios, gastos, inversores, materiales, equipos, simulaciones y líneas de presupuesto ahora van **"A la papelera"** en vez de borrarse.
+3. Menú **Papelera** (solo administrador): ver y **Restaurar**.
+4. Mandar una zona o un espacio a la papelera oculta también todo lo que contiene; al restaurarla vuelve todo.
+5. La app ya no puede borrar de verdad. `sql/3_verificar_instalacion.sql` ahora tiene 12 filas en OK.

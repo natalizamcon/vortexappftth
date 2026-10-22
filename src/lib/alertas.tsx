@@ -114,8 +114,8 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
           if (H > z.fecha_meta && a < n(z.meta_clientes)) metaCrit.push(`${z.nombre}: ${a} de ${z.meta_clientes} clientes (la meta era para el ${z.fecha_meta})`);
           else if (pasados >= 1 && a < esperado * 0.7) metaAt.push(`${z.nombre}: ${a} de ${z.meta_clientes} clientes; a esta fecha se esperaban unos ${Math.round(esperado)}`);
         });
-        if (metaCrit.length) A.push({ id: "metaV", area: "Finanzas", ruta: "zonas", nivel: "critica", titulo: `${plural(metaCrit.length, "meta de zona vencida sin cumplir", "metas de zona vencidas sin cumplir")}`, detalle: lista(metaCrit) });
-        if (metaAt.length) A.push({ id: "metaA", area: "Finanzas", ruta: "zonas", nivel: "atencion", titulo: `${plural(metaAt.length, "zona va lenta para su meta", "zonas van lentas para su meta")}`, detalle: lista(metaAt) });
+        if (metaCrit.length) A.push({ id: "metaV", area: "Finanzas", ruta: "dashboard", nivel: "critica", titulo: `${plural(metaCrit.length, "meta de zona vencida sin cumplir", "metas de zona vencidas sin cumplir")}`, detalle: lista(metaCrit) });
+        if (metaAt.length) A.push({ id: "metaA", area: "Finanzas", ruta: "dashboard", nivel: "atencion", titulo: `${plural(metaAt.length, "zona va lenta para su meta", "zonas van lentas para su meta")}`, detalle: lista(metaAt) });
 
         const pasan: { t: string; nivel: Nivel }[] = [];
         zv.forEach(z => {

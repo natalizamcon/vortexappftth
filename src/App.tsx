@@ -13,15 +13,17 @@ import Inventario from "./pages/Inventario";
 import Finanzas from "./pages/Finanzas";
 import Usuarios from "./pages/Usuarios";
 import Papelera from "./pages/Papelera";
+import Configuracion from "./pages/Configuracion";
 import Alertas from "./pages/Alertas";
 import Formularios from "./pages/Formularios";
 import Reportes from "./pages/Reportes";
 import { AlertasProvider, ContadorAlertas } from "./lib/alertas";
 
 const RUTAS: [string, string, string[] | null][] = [
-  ["dashboard", "Dashboard", null], ["alertas", "Alertas", null], ["zonas", "Zonas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
-  ["red", "Red FTTH", null], ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["formularios", "Formularios", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["reportes", "Reportes", null], ["usuarios", "Usuarios", ["admin"]], ["papelera", "Papelera", ["admin"]],
+  ["dashboard", "Dashboard", null], ["red", "Red", null], ["alertas", "Alertas", null], ["clientes", "Clientes", null], ["cobranzas", "Cobranzas", ["admin", "socio", "cobranzas", "financiero", "supervisor"]],
+  ["campo", "Mantenimientos y viajes", null], ["inventario", "Inventario", null], ["formularios", "Formularios", null], ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["reportes", "Reportes", null], ["configuracion", "Configuración", ["admin"]],
 ];
+const CONFIG = ["configuracion", "zonas", "usuarios", "papelera"];
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
 export default function App() {
@@ -35,13 +37,14 @@ export default function App() {
   const zonasVis = zonas.filter(z => !proyectoId || z.proyecto_id === proyectoId);
   const pagina = () => {
     switch (ruta) {
-      case "zonas": return <Zonas />; case "clientes": return <Clientes />; case "cobranzas": return <Cobranzas />; case "red": return <Red />;
-      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "usuarios": return <Usuarios />; case "papelera": return <Papelera />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
+      case "configuracion": case "zonas": case "usuarios": case "papelera": return perfil.rol === "admin" ? <Configuracion inicial={ruta === "configuracion" ? undefined : ruta} /> : <Dashboard />;
+      case "clientes": return <Clientes />; case "cobranzas": return <Cobranzas />; case "red": return <Red />;
+      case "campo": return <Campo />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
       default: return <Dashboard />;
     }
   };
   return <AlertasProvider>
-    <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k ? "on" : ""}>{l}{k === "alertas" && <ContadorAlertas />}</a>)}</nav></div></header>
+    <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k || (k === "configuracion" && CONFIG.includes(ruta)) ? "on" : ""}>{l}{k === "alertas" && <ContadorAlertas />}</a>)}</nav></div></header>
     <div className="barra">
       {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los espacios" : "Todos mis espacios"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
       <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>

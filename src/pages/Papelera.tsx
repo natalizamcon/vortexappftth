@@ -22,6 +22,7 @@ const TIPOS: Record<string, [string, (d: any) => string]> = {
   fondos_empresa: ["Movimiento de fondo", d => `${d.fondo} · ${d.tipo} · ${bs(d.monto)}${d.nota ? " · " + d.nota : ""}`],
   compras_empresa: ["Compra de la empresa", d => `${d.articulo} · ${d.cantidad} × ${bs(d.costo_unitario)}`],
   naps: ["NAP", d => `${d.codigo} · ${d.tipo} · ${d.puertos} puertos`],
+  costos_variables: ["Costo de la red", d => `${d.concepto}${d.destino ? " → " + d.destino : ""} · ${bs(d.real_total)}`],
   olts: ["OLT", d => `${d.nombre}${d.marca || d.modelo ? " · " + [d.marca, d.modelo].filter(Boolean).join(" ") : ""}`],
   troncales: ["Troncal", d => `${d.codigo} · ${[d.desde, d.hasta].filter(Boolean).join(" → ") || "sin recorrido"} · ${d.hilos} hilos`],
   fusiones: ["Fusión", d => `Hilo ${d.hilo_entrada ?? "?"}${d.caja_empalme ? " · " + d.caja_empalme : ""}${d.perdida_db != null ? " · " + d.perdida_db + " dB" : ""}`],

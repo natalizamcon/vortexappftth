@@ -55,34 +55,43 @@ export function Rentabilidad() {
 }
 
 /* =============================== INGRESOS Y GASTOS =============================== */
+function RangoFechas({ desde, hasta, todo, rango, setTodo, nota }: { desde: string; hasta: string; todo: boolean; rango: (a: string, b: string) => void; setTodo: () => void; nota: string }) {
+  const m0 = hoy().slice(0, 7), ayer = new Date(+new Date(m0 + "-01T12:00:00") - 86400000).toISOString().slice(0, 10);
+  return <div className="card"><div className="fila"><label className="fila">Desde <input type="date" value={desde} onChange={e => rango(e.target.value, hasta)} /></label><label className="fila">Hasta <input type="date" value={hasta} onChange={e => rango(desde, e.target.value)} /></label>
+    <button className="btn suave" onClick={() => rango(mesDesp(m0, -1) + "-01", ayer)}>Último mes</button><button className="btn suave" onClick={() => rango(mesDesp(m0, -2) + "-01", hoy())}>3 meses</button>
+    <button className="btn suave" onClick={() => rango(mesDesp(m0, -11) + "-01", hoy())}>12 meses</button><button className={"btn " + (todo ? "" : "suave")} onClick={setTodo}>Todo</button></div>
+    <p className="mute" style={{ margin: "8px 0 0" }}>{nota}</p></div>;
+}
+
 export function IngresosGastos() {
   const { zonas, proyectoId, zonaId } = useApp(), al = useAlcance(), actual = hoy().slice(0, 7);
-  const [mes, setMes] = useState(actual), [conInv, setConInv] = useState(false);
-  const hist = useQuery(() => aDatos(todas(() => al(supabase.from("v_resumen_zona_mes").select("*").gte("mes", mesDesp(actual, -11) + "-01").order("mes")))), [proyectoId, zonaId]);
+  const [desde, setDesde] = useState(mesDesp(actual, -11) + "-01"), [hasta, setHasta] = useState(hoy()), [todo, setTodo] = useState(false), [conInv, setConInv] = useState(false);
+  const mA = desde.slice(0, 7), mB = hasta.slice(0, 7), rango = (a: string, b: string) => { setTodo(false); setDesde(a); setHasta(b); };
+  const hist = useQuery(() => aDatos(todas(() => { let q = al(supabase.from("v_resumen_zona_mes").select("*")); if (!todo) q = q.gte("mes", mA + "-01").lte("mes", mB + "-01"); return q.order("mes"); })), [proyectoId, zonaId, mA, mB, todo]);
   const capex = useQuery(() => aDatos(todas(() => al(supabase.from("v_resumen_zona_mes").select("inversion").order("mes")))), [proyectoId, zonaId]);
-  const gcat = useQuery(() => aDatos(todas(() => al(supabase.from("fin_movimientos").select("categoria, monto").eq("tipo", "GASTO_OPERATIVO").gte("fecha", rangoMes(mes)[0]).lte("fecha", rangoMes(mes)[1]).order("fecha")))), [proyectoId, zonaId, mes]);
-  const H: any[] = (hist.data as any[]) || [], meses = mesesRango(mesDesp(actual, -11), actual), ing = (r: any) => num(r.ingresos_servicio) + num(r.otros_ingresos);
+  const gcat = useQuery(() => aDatos(todas(() => { let q = al(supabase.from("fin_movimientos").select("categoria, monto").eq("tipo", "GASTO_OPERATIVO")); if (!todo) q = q.gte("fecha", rangoMes(mA)[0]).lte("fecha", rangoMes(mB)[1]); return q.order("fecha"); })), [proyectoId, zonaId, mA, mB, todo]);
+  const H: any[] = (hist.data as any[]) || [], ing = (r: any) => num(r.ingresos_servicio) + num(r.otros_ingresos);
+  const meses = todo ? Array.from(new Set(H.map(r => String(r.mes).slice(0, 7)))).sort() : mesesRango(mA, mB);
   const delMes = (m: string) => H.filter(r => String(r.mes).slice(0, 7) === m);
   const ingM = meses.map(m => delMes(m).reduce((s, r) => s + ing(r), 0)), gasM = meses.map(m => sumaDe(delMes(m), "gastos_operativos")), invM = meses.map(m => sumaDe(delMes(m), "inversion"));
   const egM = meses.map((_, i) => gasM[i] + (conInv ? invM[i] : 0)), utilM = meses.map((_, i) => ingM[i] - gasM[i]);
   const zv = zonas.filter(z => (!proyectoId || z.proyecto_id === proyectoId) && (!zonaId || z.id === zonaId));
   const seriesZ = zv.map((z, i) => ({ nombre: z.nombre, color: PALETA[i % PALETA.length], datos: meses.map(m => delMes(m).filter(r => r.zona_id === z.id).reduce((s, r) => s + ing(r), 0)) })).filter(s => s.datos.some(v => v > 0));
-  const k = meses.indexOf(mes) >= 0 ? meses.indexOf(mes) : meses.length - 1, I = ingM[k] || 0, G = gasM[k] || 0, U = I - G, CAPEX = sumaDe((capex.data as any[]) || [], "inversion");
+  const I = ingM.reduce((a, b) => a + b, 0), G = gasM.reduce((a, b) => a + b, 0), U = I - G, CAPEX = sumaDe((capex.data as any[]) || [], "inversion"), promU = meses.length ? U / meses.length : 0;
   const cats: Record<string, number> = {}; ((gcat.data as any[]) || []).forEach(x => { const c = x.categoria || "Sin categoría"; cats[c] = (cats[c] || 0) + num(x.monto); });
   const filasCat = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([nombre, valor]) => ({ nombre, valor }));
-  const t12 = { i: ingM.reduce((a, b) => a + b, 0), e: egM.reduce((a, b) => a + b, 0) };
 
   return <>
-    <div className="fila" style={{ marginBottom: 12 }}><b>Mes:</b><select value={mes} onChange={e => setMes(e.target.value)}>{opcionesMes().map(m => <option key={m} value={m}>{mesLargo(m)}</option>)}</select></div>
+    <RangoFechas desde={desde} hasta={hasta} todo={todo} rango={rango} setTodo={() => setTodo(true)} nota={`Mostrando ${meses.length} mes(es) completos que tocan el rango elegido. Los ingresos son las mensualidades más otros ingresos; los gastos son los operativos. La inversión (CAPEX) va aparte.`} />
     {hist.loading ? <Cargando /> : hist.error ? <Aviso tipo="mal">{hist.error}</Aviso> : <>
-      <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Ingresos del mes" v={bs(I)} /><Kpi t="Gastos operativos" v={bs(G)} /><Kpi t="Utilidad del mes" v={bs(U)} c={U >= 0 ? "var(--ok)" : "var(--bad)"} /><Kpi t="Inversión (CAPEX)" v={bs(CAPEX)} s="Acumulada" /><Kpi t="Meses para recuperar" v={U > 0 && CAPEX > 0 ? Math.ceil(CAPEX / U) : "—"} s={U > 0 ? "Inversión ÷ utilidad del mes" : "Sin utilidad este mes"} /></div>
+      <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Ingresos del período" v={bs(I)} /><Kpi t="Gastos operativos" v={bs(G)} /><Kpi t="Utilidad del período" v={bs(U)} c={U >= 0 ? "var(--ok)" : "var(--bad)"} /><Kpi t="Inversión (CAPEX)" v={bs(CAPEX)} s="Acumulada" /><Kpi t="Meses para recuperar" v={promU > 0 && CAPEX > 0 ? Math.ceil(CAPEX / promU) : "—"} s={promU > 0 ? "Inversión ÷ utilidad mensual promedio" : "Sin utilidad en el período"} /></div>
       <div className="mitades">
-        <div className="card"><h2>Ingresos y egresos de los últimos 12 meses</h2><BarrasAgrupadas etiquetas={meses.map(etiquetaMes)} series={[{ nombre: "Ingresos", color: "var(--lil)", datos: ingM }, { nombre: "Egresos", color: "var(--acc)", datos: egM }]} /><Leyenda items={[{ nombre: "Ingresos", color: "var(--lil)" }, { nombre: conInv ? "Egresos (con inversión)" : "Egresos (gastos operativos)", color: "var(--acc)" }]} />
+        <div className="card"><h2>Ingresos y egresos por mes</h2><BarrasAgrupadas etiquetas={meses.map(etiquetaMes)} series={[{ nombre: "Ingresos", color: "var(--lil)", datos: ingM }, { nombre: "Egresos", color: "var(--acc)", datos: egM }]} /><Leyenda items={[{ nombre: "Ingresos", color: "var(--lil)" }, { nombre: conInv ? "Egresos (con inversión)" : "Egresos (gastos operativos)", color: "var(--acc)" }]} />
           <label className="fila" style={{ marginTop: 8 }}><input type="checkbox" checked={conInv} onChange={e => setConInv(e.target.checked)} /> Incluir la inversión (CAPEX) en los egresos</label>
-          <p className="mute" style={{ margin: "6px 0 0" }}>Total 12 meses: ingresos <b>{bs(t12.i)}</b> · egresos <b>{bs(t12.e)}</b> · utilidad <b>{bs(t12.i - t12.e)}</b></p></div>
+          <p className="mute" style={{ margin: "6px 0 0" }}>Total del período: ingresos <b>{bs(I)}</b> · egresos <b>{bs(egM.reduce((a, b) => a + b, 0))}</b> · utilidad <b>{bs(I - egM.reduce((a, b) => a + b, 0))}</b></p></div>
         <div className="card"><h2>Ingresos por zona, mes a mes</h2>{seriesZ.length ? <><BarrasAgrupadas etiquetas={meses.map(etiquetaMes)} series={seriesZ} totales={ingM} /><Leyenda items={seriesZ.map(s => ({ nombre: s.nombre, color: s.color }))} /><p className="mute" style={{ margin: "6px 0 0" }}>El número sobre cada mes es el total generado por todas las zonas.</p></> : <Vacio>Aún no hay ingresos para mostrar.</Vacio>}</div>
-        <div className="card"><h2>Gastos operativos por categoría · {mesLargo(mes)}</h2>{gcat.loading ? <Cargando /> : filasCat.length ? <BarrasH filas={filasCat} /> : <Vacio>No hay gastos operativos registrados en este mes.</Vacio>}</div>
-        <div className="card"><h2>Utilidad de los últimos 12 meses</h2><Linea etiquetas={meses.map(etiquetaMes)} series={[{ nombre: "Utilidad", color: "var(--ok)", datos: utilM }]} /><p className="mute" style={{ margin: "6px 0 0" }}>Ingresos menos gastos operativos de cada mes. Si baja de la línea negra, ese mes hubo pérdida.</p></div>
+        <div className="card"><h2>Gastos operativos por categoría</h2>{gcat.loading ? <Cargando /> : filasCat.length ? <BarrasH filas={filasCat} /> : <Vacio>No hay gastos operativos registrados en este período.</Vacio>}</div>
+        <div className="card"><h2>Utilidad por mes</h2><Linea etiquetas={meses.map(etiquetaMes)} series={[{ nombre: "Utilidad", color: "var(--ok)", datos: utilM }]} /><p className="mute" style={{ margin: "6px 0 0" }}>Ingresos menos gastos operativos de cada mes. Si baja de la línea negra, ese mes hubo pérdida.</p></div>
       </div></>}
     <div style={{ marginTop: 14 }}><Crud titulo="Ingresos, gastos operativos e inversiones (si eliges una zona arriba, el registro queda en esa zona)" tabla="fin_movimientos" orden="fecha" conZona="opcional" select="*, zonas(nombre)" extra={f => <span className="mute">{f.zonas?.nombre || "Todo el proyecto"}</span>} campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "tipo", l: "Tipo", t: "select", opts: ["INGRESO", "GASTO_OPERATIVO", "INVERSION"], req: true }, { k: "categoria", l: "Categoría (Starlink, materiales…)" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "descripcion", l: "Descripción" }, { k: "comprobante_path", l: "Comprobante", t: "archivo" }]} columnas={["fecha", "tipo", "categoria", "monto", "descripcion"]} /></div>
   </>;

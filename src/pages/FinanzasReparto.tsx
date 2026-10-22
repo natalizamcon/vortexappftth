@@ -77,23 +77,24 @@ async function cargarReparto(zona: any, mes: string) {
       liqSocios = ls; liqFondos = lf;
     }
     return { data: { cobrado: r2(suma(pagos, "monto")), otros: r2(suma(otros, "monto")), gastos: r2(suma(lineasGasto, "monto")), lineasGasto, lineasOtros: otros, sinZona: r2(suma(sinZona, "monto")),
-      inversores: r2(suma(pinv, "monto")), nPagosInv: pinv.length, compartidos, totalCompartidos: r2(compartidos.reduce((s: number, x: any) => s + x.cuota, 0)), sociosCfg, fondosCfg, liq, liqSocios, liqFondos }, error: null };
+      inversores: r2(suma(pinv, "monto")), nPagosInv: pinv.length, compartidos, totalCompartidos: r2(compartidos.reduce((s: number, x: any) => s + x.cuota, 0)), sociosCfg, fondosCfg, todosSocios: perfiles.map((p: any) => ({ user_id: p.id, nombre: nombreDe(p) })), liq, liqSocios, liqFondos }, error: null };
   } catch (e: any) { return { data: null, error: { message: e.message } }; }
 }
 
-type Ed = { cobrado: string; otros: string; gastos: string; compartidos: string; inversores: string; socios: Record<string, string>; fondos: Record<string, string>; monto: string; fecha: string; notas: string };
+type Ed = { cobrado: string; otros: string; gastos: string; compartidos: string; inversores: string; socios: { user_id: string; nombre: string; porcentaje: string }[]; fondos: Record<string, string>; monto: string; fecha: string; notas: string };
 const edInicial = (d: any): Ed => ({ cobrado: String(d.cobrado), otros: String(d.otros), gastos: String(d.gastos), compartidos: String(d.totalCompartidos), inversores: String(d.inversores),
-  socios: Object.fromEntries(d.sociosCfg.map((s: any) => [s.user_id, String(s.porcentaje)])), fondos: Object.fromEntries(d.fondosCfg.map((f: any) => [f.fondo, String(f.porcentaje)])), monto: "", fecha: hoy(), notas: "" });
+  socios: d.sociosCfg.filter((s: any) => n(s.porcentaje) > 0).map((s: any) => ({ user_id: s.user_id, nombre: s.nombre, porcentaje: String(s.porcentaje) })),
+  fondos: Object.fromEntries(d.fondosCfg.map((f: any, i: number) => [f.fondo, String(d.fondosCfg.every((x: any) => !n(x.porcentaje)) ? [10, 20, 30, 40][i] : f.porcentaje)])), monto: "", fecha: hoy(), notas: "" });
 
 export function RepartoUtilidades() {
   const { zonas, zonaId, setZonaId, setProyectoId } = useApp(), zona = zonas.find(z => z.id === zonaId);
-  const [mes, setMes] = useState(mesAnterior(hoy())), [v, setV] = useState(0), [ed, setEd] = useState<Ed | null>(null), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [pago, setPago] = useState<any>(null), [detalle, setDetalle] = useState(false);
+  const [mes, setMes] = useState(mesAnterior(hoy())), [v, setV] = useState(0), [ed, setEd] = useState<Ed | null>(null), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [pago, setPago] = useState<any>(null), [detalle, setDetalle] = useState(false), [nuevoSoc, setNuevoSoc] = useState(""), [nuevoPct, setNuevoPct] = useState("");
   const datos = useQuery(() => zona ? cargarReparto(zona, mes) : Promise.resolve({ data: null, error: null }), [zonaId, mes, v]);
   const hist = useQuery(() => { let q = supabase.from("v_liquidaciones").select("id, zona_id, zona_nombre, periodo, fecha_reparto, utilidad, monto_repartido, total_socios, parte_dueno, estado").order("periodo", { ascending: false }).limit(60); if (zonaId) q = q.eq("zona_id", zonaId); return q; }, [zonaId, v]);
   const d: any = datos.data;
   useEffect(() => { if (d && !d.liq) setEd(edInicial(d)); else setEd(null); }, [datos.data]);
   const res = d && ed ? calcular({ cobrado: n(ed.cobrado), otros: n(ed.otros), gastos: n(ed.gastos), compartidos: n(ed.compartidos), inversores: n(ed.inversores),
-    socios: d.sociosCfg.map((s: any) => ({ ...s, porcentaje: n(ed.socios[s.user_id]) })), fondos: FONDOS.map(f => ({ fondo: f as string, porcentaje: n(ed.fondos[f]) })), montoManual: ed.monto === "" ? null : n(ed.monto) }) : null;
+    socios: ed.socios.map(s => ({ user_id: s.user_id, nombre: s.nombre, porcentaje: n(s.porcentaje) })), fondos: FONDOS.map(f => ({ fondo: f as string, porcentaje: n(ed.fondos[f]) })), montoManual: ed.monto === "" ? null : n(ed.monto) }) : null;
   const up = (k: keyof Ed, val: any) => ed && setEd({ ...ed, [k]: val });
 
   const confirmar = async () => {
@@ -107,6 +108,12 @@ export function RepartoUtilidades() {
     const { error } = await supabase.rpc("confirmar_liquidacion", { p: payload });
     setOcup(false);
     if (error) return setMsg(error.message);
+    // el sistema recuerda los porcentajes usados para proponerlos el próximo mes (no cambian los repartos ya hechos)
+    try {
+      const usados = new Set(res.socios.map(s => s.user_id));
+      await supabase.from("zona_socios").upsert([...res.socios.map(s => ({ zona_id: zona.id, user_id: s.user_id, porcentaje: s.porcentaje })), ...d.sociosCfg.filter((s: any) => !usados.has(s.user_id)).map((s: any) => ({ zona_id: zona.id, user_id: s.user_id, porcentaje: 0 }))], { onConflict: "zona_id,user_id" });
+      await supabase.from("zona_fondos_pct").upsert(res.fondos.map(f => ({ zona_id: zona.id, fondo: f.fondo, porcentaje: f.porcentaje })), { onConflict: "zona_id,fondo" });
+    } catch { /* si falla la memoria, el reparto igual quedó confirmado */ }
     setOk("Reparto confirmado. Los aportes a los fondos ya están en Caja y fondos."); setV(x => x + 1);
   };
   const anular = async () => {
@@ -117,7 +124,7 @@ export function RepartoUtilidades() {
   const desmarcar = async (s: any) => { if (!confirm("¿Quitar la marca de pagado a " + s.socio_nombre + "?")) return; const { error } = await supabase.rpc("marcar_pago_socio", { p_id: s.id, p_fecha: null, p_comprobante: null }); if (error) setMsg(error.message); else setV(x => x + 1); };
 
   return <>
-    <Aviso>La <b>utilidad</b> de una zona es lo <b>cobrado − gastos operativos − costos compartidos − pagos a inversores</b>. Primero se pagan los <b>socios</b> según su porcentaje; lo que queda es tu parte, y se divide en <b>Caja chica, Ahorro, Inversión y Retiro</b>. Todo se puede corregir a mano antes de confirmar.</Aviso>
+    <Aviso>La <b>utilidad</b> de una zona es lo <b>cobrado − gastos operativos − costos compartidos − pagos a inversores</b>. Primero se pagan los <b>socios</b> según su porcentaje; lo que queda es tu parte, y se divide en <b>Caja chica, Ahorro, Inversión y Retiro</b>. Todo se puede corregir a mano antes de asignar.</Aviso>
     {msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="fila" style={{ marginBottom: 12 }}><b>Mes:</b><SelMes v={mes} set={setMes} /><span className="mute">{zona ? <>Zona: <b>{zona.nombre}</b></> : "Elige una zona arriba para calcular su reparto."}</span></div>
     {zona && (datos.loading ? <Cargando /> : datos.error ? <Aviso tipo="mal">{datos.error}</Aviso> : d && <>
@@ -149,10 +156,13 @@ export function RepartoUtilidades() {
 
         <div className="card tw"><h2>2. Socios</h2>
           <div className="fila" style={{ marginBottom: 8 }}><label className="fila">Monto a repartir (déjalo vacío para repartir toda la utilidad): <Monto v={ed.monto} set={x => up("monto", x)} /></label><b>Se repartirán {bs(res.monto)}</b></div>
-          {d.sociosCfg.length ? <table><thead><tr><th>Socio</th><th>Porcentaje</th><th>Le corresponde</th></tr></thead><tbody>
-            {res.socios.map((s: any) => <tr key={s.user_id}><td><b>{s.nombre}</b></td><td><Pct v={ed.socios[s.user_id]} set={x => setEd({ ...ed, socios: { ...ed.socios, [s.user_id]: x } })} /></td><td>{bs(s.monto)}</td></tr>)}
-            <tr><td><b>Tú (dueño)</b></td><td>{res.pctDueno}%</td><td><b>{bs(res.parteDueno)}</b></td></tr></tbody></table>
-            : <Vacio>Esta zona no tiene socios con porcentaje: toda la utilidad es tuya. Puedes agregarlos en <b>Socios y porcentajes</b>.</Vacio>}
+          {ed.socios.length ? <table><thead><tr><th>Socio</th><th>Porcentaje de este mes</th><th>Le corresponde</th><th /></tr></thead><tbody>
+            {ed.socios.map((so, i) => <tr key={so.user_id}><td><b>{so.nombre}</b></td><td><Pct v={so.porcentaje} set={x => setEd({ ...ed, socios: ed.socios.map((y, j) => (j === i ? { ...y, porcentaje: x } : y)) })} /></td><td>{bs(res.socios[i]?.monto)}</td><td><button className="btn suave chico" onClick={() => setEd({ ...ed, socios: ed.socios.filter((_, j) => j !== i) })}>Quitar</button></td></tr>)}
+            <tr><td><b>Tú (dueño)</b></td><td>{res.pctDueno}%</td><td><b>{bs(res.parteDueno)}</b></td><td /></tr></tbody></table>
+            : <p className="mute">No hay socios en este reparto: toda la utilidad es tuya.</p>}
+          {(() => { const libres = (d.todosSocios || []).filter((x: any) => !ed.socios.some(y => y.user_id === x.user_id)); return libres.length ? <div className="fila" style={{ marginTop: 8 }}><select value={nuevoSoc} onChange={e => setNuevoSoc(e.target.value)}><option value="">Agregar un socio a este reparto…</option>{libres.map((x: any) => <option key={x.user_id} value={x.user_id}>{x.nombre}</option>)}</select><Pct v={nuevoPct} set={setNuevoPct} />
+            <button className="btn suave" disabled={!nuevoSoc || nuevoPct === ""} onClick={() => { const x = libres.find((y: any) => y.user_id === nuevoSoc); setEd({ ...ed, socios: [...ed.socios, { user_id: x.user_id, nombre: x.nombre, porcentaje: nuevoPct }] }); setNuevoSoc(""); setNuevoPct(""); }}>Agregar</button></div> : null; })()}
+          <p className="mute" style={{ margin: "6px 0 0" }}>El porcentaje vale solo para este mes. Para el próximo, el sistema propone los que usaste ahora y los puedes cambiar.</p>
         </div>
 
         <div className="card tw"><h2>3. Tu parte ({bs(res.parteDueno)}) repartida en fondos</h2>
@@ -163,8 +173,8 @@ export function RepartoUtilidades() {
 
         <div className="card"><div className="form"><Campo l="Fecha del reparto"><input type="date" value={ed.fecha} onChange={e => up("fecha", e.target.value)} /></Campo><Campo l="Notas (opcional)"><input value={ed.notas} onChange={e => up("notas", e.target.value)} /></Campo></div>
           {res.avisos.map((a, i) => <Aviso key={i} tipo="mal">{a}</Aviso>)}
-          <button className="btn mor" disabled={ocup || !res.valido} onClick={confirmar}>{ocup ? "Confirmando…" : "Confirmar reparto"}</button>
-          <p className="mute">Al confirmar se guarda el reparto con los porcentajes que ves aquí (los de la zona no cambian) y se registran los aportes a los fondos.</p></div>
+          <button className="btn mor" disabled={ocup || !res.valido} onClick={confirmar}>{ocup ? "Asignando…" : "Asignar el reparto a los fondos"}</button>
+          <p className="mute">Al asignar se guarda el reparto con los porcentajes que ves aquí y se registran los aportes a cada fondo.</p></div>
       </>}
     </>)}
 
@@ -192,47 +202,6 @@ function PagoSocio({ s, proyecto, onClose, onListo }: { s: any; proyecto: string
 
 /* ======================================================================= */
 /*  SOCIOS Y PORCENTAJES                                                    */
-/* ======================================================================= */
-export function SociosPorcentajes() {
-  const { zonas, zonaId } = useApp(), zona = zonas.find(z => z.id === zonaId);
-  const zs = useQuery(() => zonaId ? supabase.from("zona_socios").select("user_id, porcentaje").eq("zona_id", zonaId) : nada, [zonaId]);
-  const fp = useQuery(() => zonaId ? supabase.from("zona_fondos_pct").select("fondo, porcentaje").eq("zona_id", zonaId) : nada, [zonaId]);
-  const socios = useQuery(() => supabase.from("profiles").select("id, nombre, email").eq("rol", "socio").eq("activo", true).order("nombre"), []);
-  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [nuevo, setNuevo] = useState(""), [nuevoPct, setNuevoPct] = useState("");
-  const S: any[] = (socios.data as any[]) || [], Z: any[] = (zs.data as any[]) || [], F: any[] = (fp.data as any[]) || [];
-  const totS = r2(suma(Z, "porcentaje")), pf = (f: string) => n(F.find(x => x.fondo === f)?.porcentaje), totF = r2(FONDOS.reduce((s, f) => s + pf(f), 0));
-  const nom = (id: string) => nombreDe(S.find(x => x.id === id));
-  const guardarSocio = async (user_id: string, porcentaje: number) => {
-    setMsg(""); setOk(""); const { error } = await supabase.from("zona_socios").upsert({ zona_id: zonaId, user_id, porcentaje }, { onConflict: "zona_id,user_id" });
-    if (error) { setMsg(error.message); zs.recargar(); } else { setOk("Guardado."); zs.recargar(); }
-  };
-  const guardarFondo = async (fondo: string, porcentaje: number) => {
-    setMsg(""); setOk(""); const { error } = await supabase.from("zona_fondos_pct").upsert({ zona_id: zonaId, fondo, porcentaje }, { onConflict: "zona_id,fondo" });
-    if (error) { setMsg(error.message); fp.recargar(); } else { setOk("Guardado."); fp.recargar(); }
-  };
-  if (!zona) return <Aviso>Elige una <b>zona</b> arriba para ver y cambiar sus porcentajes.</Aviso>;
-  return <>
-    <Aviso>Estos son los porcentajes <b>de la zona {zona.nombre}</b>. Cada zona tiene los suyos y puedes cambiarlos cuando quieras: los repartos ya confirmados no se modifican, porque guardan los porcentajes con los que se hicieron.</Aviso>
-    {msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
-    <div className="grid g2">
-      <div className="card tw"><h2>Socios de {zona.nombre}</h2>{zs.loading || socios.loading ? <Cargando /> : <>
-        {Z.length ? <table><thead><tr><th>Socio</th><th>Porcentaje de la utilidad</th></tr></thead><tbody>{Z.map(x => <tr key={x.user_id}><td><b>{nom(x.user_id)}</b></td>
-          <td><input type="number" min={0} max={100} step={0.5} style={{ width: 90 }} defaultValue={n(x.porcentaje)} key={x.user_id + n(x.porcentaje)} onBlur={e => n(e.target.value) !== n(x.porcentaje) && guardarSocio(x.user_id, n(e.target.value))} /> %</td></tr>)}</tbody></table> : <Vacio>Esta zona no tiene socios con porcentaje.</Vacio>}
-        <p>Socios: <b>{totS}%</b> · Tu parte: <b>{r2(Math.max(0, 100 - totS))}%</b></p></>}
-        <p className="mute">Para sacar a un socio de esta zona, ponle 0%. Cambia el número y sal del campo para guardar.</p>
-        <h3>Agregar un socio</h3>
-        {(() => { const libres = S.filter(x => !Z.some(z => z.user_id === x.id)); return libres.length ? <div className="fila"><select value={nuevo} onChange={e => setNuevo(e.target.value)}><option value="">Elige un socio…</option>{libres.map(x => <option key={x.id} value={x.id}>{nombreDe(x)}</option>)}</select>
-          <Pct v={nuevoPct} set={setNuevoPct} /><button className="btn" disabled={!nuevo || nuevoPct === ""} onClick={async () => { await guardarSocio(nuevo, n(nuevoPct)); setNuevo(""); setNuevoPct(""); }}>Agregar</button></div> : <p className="mute">No hay más usuarios con rol Socio. Créalos en el menú Usuarios.</p>; })()}
-        <p className="mute">Tener un porcentaje no le da acceso a ver la zona; el acceso se da en Zonas → Socios.</p></div>
-
-      <div className="card tw"><h2>Tu parte: reparto en fondos</h2>{fp.loading ? <Cargando /> : <>
-        <table><thead><tr><th>Fondo</th><th>Porcentaje de tu parte</th></tr></thead><tbody>{FONDOS.map(f => <tr key={f}><td>{f}</td><td><input type="number" min={0} max={100} step={0.5} style={{ width: 90 }} defaultValue={pf(f)} key={f + pf(f)} onBlur={e => n(e.target.value) !== pf(f) && guardarFondo(f, n(e.target.value))} /> %</td></tr>)}</tbody></table>
-        <p>Asignado: <b>{totF}%</b> · Sin asignar: <b>{r2(Math.max(0, 100 - totF))}%</b></p>
-        <p className="mute">Es el porcentaje de <b>lo que te queda a ti</b> después de pagar a los socios. Lo que no asignes a ningún fondo queda sin asignar. Puedes cambiarlo en cada reparto antes de confirmarlo.</p></>}</div>
-    </div>
-  </>;
-}
-
 /* ======================================================================= */
 /*  COSTOS COMPARTIDOS                                                      */
 /* ======================================================================= */
@@ -385,7 +354,8 @@ export function CajaFondos() {
   return <>
     <Aviso>Estos son los fondos de <b>tu parte</b>: Caja chica, Ahorro, Inversión y Retiro del dueño. Anota aquí lo que entra y lo que sale de cada uno. Solo tú ves esta pantalla.</Aviso>
     {msg && <Aviso tipo="mal">{msg}</Aviso>}
-    <div className="grid gk" style={{ marginBottom: 14 }}>{FONDOS.map(k => <Kpi key={k} t={k} v={bs(saldo(k))} c={saldo(k) < 0 ? "var(--bad)" : undefined} />)}</div>
+    <div className="grid gk" style={{ marginBottom: 14 }}>{FONDOS.map(k => <Kpi key={k} t={k} v={bs(saldo(k))} c={saldo(k) < 0 ? "var(--bad)" : undefined} />)}<Kpi t="Total en fondos" v={bs(FONDOS.reduce((a, k) => a + saldo(k), 0))} /></div>
+    <h2 style={{ margin: "4px 0 8px", fontSize: 17 }}>Cómo repartir la ganancia del mes</h2><RepartoUtilidades />
     <div className="card"><h2>Registrar un movimiento a mano</h2><div className="form">
       <Campo l="Fecha"><input type="date" value={f.fecha} onChange={e => setF({ ...f, fecha: e.target.value })} /></Campo>
       <Campo l="Fondo"><select value={f.fondo} onChange={e => setF({ ...f, fondo: e.target.value })}>{FONDOS.map(x => <option key={x}>{x}</option>)}</select></Campo>

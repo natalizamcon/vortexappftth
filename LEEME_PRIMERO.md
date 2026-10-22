@@ -146,3 +146,10 @@ git push origin main
 3. **Red:** NAP con editar / ampliar puertos / papelera, historial de cada puerto, editar troncales, fusiones, OLT y postes, destino y notas en los hilos, ver fotos.
 4. En todas las listas con botón "Editar" y "Ver archivo" donde corresponde.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 18 filas en OK.
+
+### Novedades de la 2.1 · Red como en el prototipo y Finanzas afinada
+1. En Supabase → SQL Editor ejecuta `sql/13_red_como_prototipo.sql` (va después del 12; es seguro, no borra datos).
+2. **Menú:** "Red" quedó junto a Dashboard. Zonas, Usuarios y Papelera ahora están juntos en **Configuración** (solo administrador).
+3. **Red tiene 7 pestañas:** Panel de red · Costos fijos · Costos variables · Red y NAP · Troncales y postes · Mapa · Historial de la red. Se quitó OLT y PON de la pantalla.
+4. **Finanzas:** Pagos al personal como en el prototipo; Caja y fondos incluye el reparto del mes con porcentajes de socios para ese mes (ya no existen "Reparto de utilidades" ni "Socios y porcentajes" como pestañas); Presupuesto de la zona con barras de avance; Ingresos y gastos con rango de fechas.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 19 filas en OK.

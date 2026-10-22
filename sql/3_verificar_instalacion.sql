@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 18 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 19 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -98,4 +98,13 @@ select n, comprobacion, resultado, estado from (
                and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name in ('eliminado_en','troncal_id','padre_id')) = 3
                and exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'ampliar_nap')
               then 'OK' else 'FALTA: ejecuta 12_red_perfeccionada.sql' end
+  union all
+  select 19, 'Red como en el prototipo: costos variables e historial (archivo 13)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'costos_variables')
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_historial_red')
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name = 'splitter'))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'costos_variables') = 1
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_historial_red') = 1
+               and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'naps' and column_name = 'splitter') = 1
+              then 'OK' else 'FALTA: ejecuta 13_red_como_prototipo.sql' end
 ) r order by n;

@@ -8,7 +8,8 @@ import { Presupuesto, PresupuestoVsReal } from "./Presupuesto";
 import Simulador from "./Simulador";
 import Compras from "./Compras";
 import { IngresosGastos, Rentabilidad } from "./FinanzasPanel";
-import { CajaFondos, CostosCompartidos, GastosEmpresa, MiReparto, RepartoUtilidades, SociosPorcentajes } from "./FinanzasReparto";
+import { CajaFondos, CostosCompartidos, GastosEmpresa, MiReparto } from "./FinanzasReparto";
+import { PagosPersonal } from "./FinanzasPersonal";
 
 /** Finanzas ordenada en carpetas: cada carpeta agrupa lo que va junto. */
 export default function Finanzas() {
@@ -16,7 +17,7 @@ export default function Finanzas() {
   const socio = perfil?.rol === "socio", par = (x: [string, string][], si: boolean) => (si ? x : []);
   const carpetas: [string, string, [string, string][]][] = [
     ["panel", "Panel", [["rent", "Rentabilidad"], ["mov", "Ingresos y gastos"]]],
-    ["inv", "Inversores y reparto", [["inv", "Inversores"], ...par([["rep", "Reparto de utilidades"], ["soc", "Socios y porcentajes"], ["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
+    ["inv", "Inversores y fondos", [["inv", "Inversores"], ...par([["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
     ["sim", "Simulador y presupuesto", [["sim", "Simulador de proyecto"], ["pre", "Presupuesto de la zona"], ["vs", "Presupuesto vs real"]]],
     ["costos", "Costos y compras", [...par([["comp", "Costos compartidos"], ["emp", "Gastos de la empresa"], ["compras", "Compras de la empresa"]], admin), ["per", "Pagos al personal"]]],
   ];
@@ -29,8 +30,6 @@ export default function Finanzas() {
     {clave === "panel:rent" && <Rentabilidad />}
     {clave === "panel:mov" && <IngresosGastos />}
     {clave === "inv:inv" && <Inversores />}
-    {clave === "inv:rep" && <RepartoUtilidades />}
-    {clave === "inv:soc" && <SociosPorcentajes />}
     {clave === "inv:fon" && <CajaFondos />}
     {clave === "inv:mi" && <MiReparto />}
     {clave === "sim:sim" && <Simulador />}
@@ -39,7 +38,7 @@ export default function Finanzas() {
     {clave === "costos:comp" && <CostosCompartidos />}
     {clave === "costos:emp" && <GastosEmpresa />}
     {clave === "costos:compras" && <Compras />}
-    {clave === "costos:per" && <Crud titulo="Pagos hechos al personal (respaldo)" tabla="pagos_personal" conZona orden="fecha" campos={[{ k: "fecha", l: "Fecha", t: "date" }, { k: "trabajador", l: "Trabajador", req: true }, { k: "concepto", l: "Concepto", t: "select", opts: ["Jornal", "Pago de viaje", "Viáticos", "Bono", "Adelanto", "Otro"], def: "Jornal" }, { k: "monto", l: "Monto (Bs)", t: "number", req: true }, { k: "nota", l: "Nota" }, { k: "comprobante_path", l: "Respaldo (foto del recibo)", t: "archivo" }]} columnas={["fecha", "trabajador", "concepto", "monto", "nota"]} tfoot={f => <b>Total: {bs(f.reduce((s, x) => s + +x.monto, 0))}</b>} />}
+    {clave === "costos:per" && <PagosPersonal />}
   </>;
 }
 

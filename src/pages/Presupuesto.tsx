@@ -81,7 +81,7 @@ const Num = ({ v, set, paso, ancho }: { v: any; set: (x: string) => void; paso?:
 /* ================================ PRESUPUESTO ================================ */
 /* ================================ PRESUPUESTO CONTRA GASTO REAL (barras) ================================ */
 const nada2 = Promise.resolve({ data: [], error: null });
-function PresupuestoBarras({ zona }: { zona: any }) {
+export function PresupuestoBarras({ zona }: { zona: any }) {
   const lineas = useQuery(() => supabase.from("presupuesto_lineas").select("categoria, cantidad, monto_unitario, origen, creado_en").eq("zona_id", zona.id).eq("tipo", "INVERSION"), [zona.id]);
   const viajes = useQuery(() => supabase.from("viajes").select("id, fecha_inicio, fecha_fin, personas, gasolina, movilidad, pago_dia, viaticos_dia").eq("zona_id", zona.id).eq("estado", "FINALIZADO"), [zona.id]);
   const dias = useQuery(() => ((viajes.data as any[]) || []).length ? supabase.from("viaje_dias").select("viaje_id, gasto").in("viaje_id", ((viajes.data as any[]) || []).map(v => v.id)) : nada2, [viajes.data]);

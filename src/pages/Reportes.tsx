@@ -151,7 +151,7 @@ export default function Reportes() {
 
   const rango = (a: string, b: string) => { setDesde(a); setHasta(b); };
   const mesPasado = () => rango(sumaMeses(primeroDelMes(hoy()), -1), new Date(+new Date(primeroDelMes(hoy()) + "T12:00:00") - 86400000).toISOString().slice(0, 10));
-  const subtitulo = `${zonaId ? "Zona: " + nz(zonaId) : proyectoId ? "Todas las zonas del espacio" : "Todas las zonas"}${R.fechas ? " · del " + fechaLarga(desde) + " al " + fechaLarga(hasta) : ""}`;
+  const subtitulo = `${zonaId ? "Zona: " + nz(zonaId) : proyectoId ? "Todas las zonas del proyecto" : "Todas las zonas"}${R.fechas ? " · del " + fechaLarga(desde) + " al " + fechaLarga(hasta) : ""}`;
   const exportar = () => {
     if (!res) return;
     const filas = [res.cols.map(c => c.t), ...res.filas, ...(res.total ? [res.total] : [])];

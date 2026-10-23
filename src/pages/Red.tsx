@@ -7,6 +7,7 @@ import { PanelRed } from "./RedPanel";
 import { CostosFijos, CostosVariables } from "./RedCostos";
 import RedNap from "./RedNap";
 import { HistorialRed } from "./RedHistorial";
+import { BotonesNuevo } from "./NuevoProyectoZona";
 
 /** Mapa de la red (provisional): lista de puntos con coordenadas y enlace a Google Maps. El mapa interactivo se agrega al final. */
 function MapaProvisional() {
@@ -30,6 +31,7 @@ export default function Red() {
   const irTroncal = (t: string, troncal?: string) => { if (t === "hilos") { setTab("troncales"); setSub("hilos"); if (troncal) setTroncalSel(troncal); } else setTab(t); };
   return <>
     <h1>Red</h1>
+    <BotonesNuevo />
     <Tabs items={[["panel", "Panel de red"], ["fijos", "Costos fijos"], ["vars", "Costos variables"], ["naps", "Red y NAP"], ["troncales", "Troncales y postes"], ["mapa", "Mapa"], ["hist", "Historial de la red"]]} valor={tab} onChange={setTab} />
     {tab === "panel" && <PanelRed ir={irPanel} />}
     {tab === "fijos" && <CostosFijos />}

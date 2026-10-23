@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 20 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 21 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -111,4 +111,13 @@ select n, comprobacion, resultado, estado from (
   select 20, 'Clientes como en el prototipo (archivo 14)',
          (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_comportamiento','v_aplicaciones','v_pagos_registro'))::text,
          case when (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_comportamiento','v_aplicaciones','v_pagos_registro')) = 3 then 'OK' else 'FALTA: ejecuta 14_clientes_como_prototipo.sql' end
+  union all
+  select 21, 'Instalaciones y servicios, proyectos y socios (archivo 15)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('instaladores','ordenes_trabajo','diario_zona','viaje_personal'))
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_instalaciones_lista','v_actividades','v_bajas_lista'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_proyecto','gestionar_socio_zona','completar_baja')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('instaladores','ordenes_trabajo','diario_zona','viaje_personal')) = 4
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_instalaciones_lista','v_actividades','v_bajas_lista')) = 3
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_proyecto','gestionar_socio_zona','completar_baja')) = 3
+              then 'OK' else 'FALTA: ejecuta 15_servicios_y_proyectos.sql' end
 ) r order by n;

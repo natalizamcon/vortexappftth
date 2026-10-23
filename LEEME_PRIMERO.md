@@ -161,3 +161,13 @@ git push origin main
 4. **Paquetes:** los cambios de velocidad, precio, activo y día de corte solo se aplican con el botón **Efectuar cambios**.
 5. **Pagos:** al escribir el monto se ve en vivo a qué meses se aplica.
 6. `sql/3_verificar_instalacion.sql` ahora tiene 20 filas en OK.
+
+### Novedades de la 3.0 · Instalaciones y servicios, proyectos y socios
+1. En Supabase → SQL Editor ejecuta `sql/15_servicios_y_proyectos.sql` (después del 14; no borra datos).
+2. **Menú:** Dashboard · Red · Clientes · Instalaciones y servicios · Inventario · Finanzas · Formularios · Centro de alertas · Reportes · Configuración. "Mantenimientos y viajes" ahora es **Instalaciones y servicios**.
+3. **+ Nueva zona** (asistente paso a paso, pregunta si tiene socios) y **+ Nuevo proyecto** vuelven a estar arriba de Red, Clientes e Instalaciones y servicios.
+4. **Red → Historial de la red → Socios del proyecto:** agregar, quitar o cambiar de proyecto a un socio. Cada cambio queda en el historial.
+5. **Clientes:** el Panel y el Registro de pagos usan el buscador por fechas de Finanzas.
+6. **Instalaciones y servicios:** Panel operativo con órdenes de trabajo · Instalaciones · Bajas · Mantenimientos · Instaladores · Avance y viajes (Avance del plan, Viajes y gastos con seguimiento, Diario de la zona y Gastos adicionales).
+7. Al **finalizar un viaje**, su costo pasa solo a gastos operativos (Transporte). No se crea retroactivamente para viajes ya finalizados.
+8. `sql/3_verificar_instalacion.sql` ahora tiene 21 filas en OK.

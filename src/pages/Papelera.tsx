@@ -5,7 +5,7 @@ import { Aviso, Cargando, Vacio, bs, useQuery } from "../lib/ui";
 import { restaurarDePapelera } from "../lib/papelera";
 
 const TIPOS: Record<string, [string, (d: any) => string]> = {
-  proyectos: ["Espacio", d => d.nombre],
+  proyectos: ["Proyecto", d => d.nombre],
   zonas: ["Zona", d => d.nombre],
   costos_fijos: ["Costo fijo", d => `${d.concepto} · ${bs(Number(d.cantidad) * Number(d.monto_unitario))}`],
   equipos_serie: ["Equipo", d => `${d.serie}${d.modelo ? " · " + d.modelo : ""}`],

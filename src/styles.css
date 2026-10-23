@@ -110,3 +110,4 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .chip-pago b{display:block;font-size:15px}.chip-pago small{color:var(--mute)}
 .chip-pago.cubierto{background:var(--okb);border-color:#b9e3c9}.chip-pago.parcial{background:var(--warnb);border-color:#ecd49a}.chip-pago.ya{background:#eef0f4}
 .ficha-sec{margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+.e-PROGRAMADA,.e-PAUSADA{background:var(--warnb);color:var(--warn)}

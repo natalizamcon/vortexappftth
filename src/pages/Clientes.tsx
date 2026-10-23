@@ -7,6 +7,7 @@ import { Paquetes } from "./ClientesPaquetes";
 import { Cobranzas } from "./ClientesCobranzas";
 import { Pagos } from "./ClientesPagos";
 import { RegistroPagos } from "./ClientesRegistro";
+import { BotonesNuevo } from "./NuevoProyectoZona";
 
 const ROLES_COBRANZA = ["admin", "socio", "cobranzas", "financiero", "supervisor"];
 
@@ -19,6 +20,7 @@ export default function Clientes({ inicial }: { inicial?: string }) {
   const actual = items.some(([k]) => k === tab) ? tab : "panel";
   return <>
     <h1>Clientes</h1>
+    <BotonesNuevo />
     <Tabs items={items} valor={actual} onChange={t => ir(t)} />
     {actual === "panel" && <PanelClientes ir={ir} />}
     {actual === "lista" && <ListaClientes key={filtro} filtroInicial={filtro} />}

@@ -4,7 +4,7 @@ import { useApp } from "../lib/auth";
 import { Aviso, Cargando, Kpi, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
 import { mesDesp } from "../lib/datos";
-import { rangoMes } from "../lib/reparto";
+import { RangoFechas } from "../lib/rango";
 import { MEDIOS, mesYear } from "./ClientesPagos";
 
 const n = (x: any) => Number(x) || 0;
@@ -13,17 +13,18 @@ const mesLargo = (m: string) => { const t = new Date(m + "-01T12:00:00").toLocal
 /** Historial de todos los pagos, con su comprobante y la posibilidad de anularlos. */
 export function RegistroPagos() {
   const { proyectoId, zonaId } = useApp(), al = useAlcance();
-  const [q, setQ] = useState(""), [mes, setMes] = useState(""), [medio, setMedio] = useState(""), [est, setEst] = useState(""), [anular, setAnular] = useState<any>(null), [motivo, setMotivo] = useState(""), [msg, setMsg] = useState("");
-  const p = useQuery(() => { let x = al(supabase.from("v_pagos_registro").select("*").order("fecha", { ascending: false }).order("creado_en", { ascending: false }).limit(1000)); if (mes) { const [a, b] = rangoMes(mes); x = x.gte("fecha", a).lte("fecha", b); } return x; }, [proyectoId, zonaId, mes]);
+  const [q, setQ] = useState(""), [desde, setDesde] = useState(mesDesp(hoy().slice(0, 7), -2) + "-01"), [hasta, setHasta] = useState(hoy()), [todo, setTodo] = useState(false), [medio, setMedio] = useState(""), [est, setEst] = useState(""), [anular, setAnular] = useState<any>(null), [motivo, setMotivo] = useState(""), [msg, setMsg] = useState("");
+  const p = useQuery(() => { let x = al(supabase.from("v_pagos_registro").select("*").order("fecha", { ascending: false }).order("creado_en", { ascending: false }).limit(1000)); if (!todo) x = x.gte("fecha", desde).lte("fecha", hasta); return x; }, [proyectoId, zonaId, desde, hasta, todo]);
   const L: any[] = ((p.data as any[]) || []).filter(x => (!medio || x.medio === medio) && (!est || (est === "anulado" ? x.anulado : !x.anulado)) && (x.cliente_nombre + " " + x.cliente_codigo).toLowerCase().includes(q.toLowerCase()));
   const vigentes = L.filter(x => !x.anulado), total = vigentes.reduce((s, x) => s + n(x.monto), 0);
   const ver = async (ruta: string) => { const u = await urlArchivo("comprobantes", ruta); if (u) window.open(u, "_blank"); else setMsg("No se pudo abrir el comprobante."); };
   const confirmarAnular = async () => { if (!motivo.trim()) return setMsg("Escribe el motivo de la anulación."); const { error } = await supabase.rpc("anular_pago", { p_pago: anular.id, p_motivo: motivo.trim() }); if (error) setMsg(error.message); else { setAnular(null); setMotivo(""); setMsg(""); p.recargar(); } };
   return <>
     {msg && !anular && <Aviso tipo="mal">{msg}</Aviso>}
-    <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Pagos registrados" v={vigentes.length} /><Kpi t="Total cobrado" v={bs(total)} s={mes ? mesLargo(mes) : "Todo el historial mostrado"} /><Kpi t="Anulados" v={L.filter(x => x.anulado).length} s={L.some(x => x.anulado) ? bs(L.filter(x => x.anulado).reduce((s, x) => s + n(x.monto), 0)) : "Ninguno"} /></div>
+    <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Pagos registrados" v={vigentes.length} /><Kpi t="Total cobrado" v={bs(total)} s={todo ? "Todo el historial" : `${desde} → ${hasta}`} /><Kpi t="Anulados" v={L.filter(x => x.anulado).length} s={L.some(x => x.anulado) ? bs(L.filter(x => x.anulado).reduce((s, x) => s + n(x.monto), 0)) : "Ninguno"} /></div>
+    <RangoFechas desde={desde} hasta={hasta} todo={todo} rango={(x, y) => { setTodo(false); setDesde(x); setHasta(y); }} setTodo={() => setTodo(true)} />
+    <div style={{ height: 12 }} />
     <div className="fila" style={{ marginBottom: 10 }}><input placeholder="Buscar por cliente o código" value={q} onChange={e => setQ(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
-      <select value={mes} onChange={e => setMes(e.target.value)}><option value="">Todos los meses</option>{Array.from({ length: 24 }, (_, i) => mesDesp(hoy().slice(0, 7), -i)).map(m => <option key={m} value={m}>{mesLargo(m)}</option>)}</select>
       <select value={medio} onChange={e => setMedio(e.target.value)}><option value="">Todos los medios</option>{MEDIOS.map(m => <option key={m}>{m}</option>)}</select>
       <select value={est} onChange={e => setEst(e.target.value)}><option value="">Vigentes y anulados</option><option value="vigente">Solo vigentes</option><option value="anulado">Solo anulados</option></select></div>
     <div className="card tw"><h2>Registro de pagos</h2>{p.loading ? <Cargando /> : p.error ? <Aviso tipo="mal">{p.error}</Aviso> : L.length ? <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Medio</th><th>Tipo</th><th>Desde</th><th>Cubre hasta</th><th>Observaciones</th><th>Registró</th><th>Comprobante</th><th /></tr></thead>

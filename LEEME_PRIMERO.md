@@ -196,3 +196,10 @@ git push origin main
 3. **Dashboard** nuevo (Dashboard primero en el menú): período con fechas, CAPEX y recuperación, 8 indicadores, evolución del negocio (a la mitad del ancho), Cobranzas, Finanzas, Red FTTH, Operaciones, próximas tareas y actividad reciente.
 4. Barra superior con **buscador** (clientes, NAP, equipos), campana de alertas y menú de usuario.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 24 filas en OK.
+
+### Novedades de la 3.4 · Zonas dentro de su proyecto, compras en el inventario y vista por almacén
+1. En Supabase → SQL Editor ejecuta `sql/19_zonas_y_compras.sql` (después del 18; no borra datos).
+2. **Nueva zona** ya no crea un proyecto: la zona queda dentro del proyecto que elijas en el asistente. Si quieres un proyecto nuevo, créalo antes con "+ Nuevo proyecto".
+3. **Compras de la empresa** entran solas al inventario (proyecto y almacén que elijas, con el precio pagado). Las compras que ya tenías pasan una vez al inventario del proyecto principal. Si cambias el almacén de una compra, el material se mueve.
+4. **Inventario → Almacenes:** selector "Ver almacén" (Todos o uno), con la lista de materiales, herramientas y demás de ese almacén, filtro por categoría, búsqueda y los equipos con serie.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 25 filas en OK.

@@ -10,9 +10,9 @@ type Inv = { id: number; nombre: string; monto: any; interes: any; periodo_inter
 type Plan = { id: number; nombre: string; mbps: any; precio: any };
 type Costo = { id: number; concepto: string; cantidad: any; monto_unitario: any };
 
-const inicial = () => ({
+const inicial = (proyecto: string) => ({
   nombre: "", ubicacion: "", fecha_inicio: hoy(), dia_corte: 5,
-  con_socios: false, socios: [] as string[], proyecto_id: "",
+  con_socios: false, socios: [] as string[], proyecto_id: proyecto,
   inversores: [] as Inv[],
   planes: [{ id: 1, nombre: "Básico", mbps: 50, precio: 90 }, { id: 2, nombre: "Medio", mbps: 100, precio: 140 }, { id: 3, nombre: "Premium", mbps: 200, precio: 200 }] as Plan[],
   nap_si: true, nap_codigo: "NAP-01", nap_puertos: 16,
@@ -27,8 +27,8 @@ const Num = ({ v, set, ancho, paso }: { v: any; set: (x: string) => void; ancho?
 
 /** Crea una zona completa, paso a paso. Termina con una sola llamada a la base de datos. */
 export function ZonaWizard({ onClose }: { onClose: () => void }) {
-  const { recargar, setProyectoId, setZonaId, proyectos } = useApp();
-  const [paso, setPaso] = useState(0), [f, setF] = useState(inicial()), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false);
+  const { recargar, setProyectoId, setZonaId, proyectos, proyectoId } = useApp();
+  const [paso, setPaso] = useState(0), [f, setF] = useState(inicial(proyectoId || proyectos.find(x => x.nombre === "Vortex")?.id || proyectos[0]?.id || "")), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false);
   const socios = useQuery(() => supabase.from("profiles").select("id, nombre, email").eq("rol", "socio").eq("activo", true).order("nombre"), []);
   const S: any[] = (socios.data as any[]) || [];
   const up = (k: string, v: any) => setF({ ...f, [k]: v });
@@ -50,7 +50,7 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
     try {
       const payload = {
         nombre: f.nombre.trim(), ubicacion: f.ubicacion, fecha_inicio: f.fecha_inicio, dia_corte: n(f.dia_corte),
-        con_socios: f.con_socios, socios: f.con_socios ? f.socios : [], proyecto_id: !f.con_socios && f.proyecto_id ? f.proyecto_id : null,
+        con_socios: f.con_socios, socios: f.con_socios ? f.socios : [], proyecto_id: f.proyecto_id || null,
         inversores: f.inversores.filter(i => i.nombre.trim() && n(i.monto) > 0).map(i => ({ nombre: i.nombre, monto: n(i.monto), interes: n(i.interes), periodo_interes: i.periodo_interes, plazo_meses: n(i.plazo_meses) || 12 })),
         planes: f.planes.map(p => ({ nombre: p.nombre, mbps: n(p.mbps), precio: n(p.precio) })),
         nap: f.nap_si ? { codigo: f.nap_codigo, puertos: n(f.nap_puertos) } : null,
@@ -86,20 +86,21 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
     </div>}
 
     {paso === 1 && <>
-      <p><b>¿Esta zona tendrá socios o inversores que puedan ver solo esta zona?</b></p>
+      <div className="card"><h2>¿En qué proyecto va esta zona?</h2>
+        <select value={f.proyecto_id} onChange={e => up("proyecto_id", e.target.value)}>{proyectos.length ? proyectos.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>) : <option value="">Proyecto principal (se crea con esta zona)</option>}</select>
+        <p className="mute" style={{ margin: "8px 0 0" }}>La zona se crea <b>dentro</b> de este proyecto; no se crea ningún proyecto nuevo. Si necesitas un proyecto nuevo, créalo antes con "+ Nuevo proyecto".</p></div>
+      <p><b>¿Esta zona tendrá socios o inversores que la vean?</b></p>
       <div className="grid g2">
         <button className="card" style={{ textAlign: "left", cursor: "pointer", borderColor: !f.con_socios ? "var(--acc)" : undefined, borderWidth: !f.con_socios ? 2 : 1 }} onClick={() => up("con_socios", false)}>
-          <b>No, es solo mía</b><br /><span className="mute">Va en un proyecto tuyo y comparte el almacén central con tus otras zonas de ese proyecto.</span></button>
+          <b>No, es solo mía</b><br /><span className="mute">Solo tú y las personas que ya ven el proyecto la verán.</span></button>
         <button className="card" style={{ textAlign: "left", cursor: "pointer", borderColor: f.con_socios ? "var(--acc)" : undefined, borderWidth: f.con_socios ? 2 : 1 }} onClick={() => up("con_socios", true)}>
-          <b>Sí, con socios o inversores</b><br /><span className="mute">La zona queda en un proyecto propio. Cada socio que elijas verá únicamente ese proyecto.</span></button>
+          <b>Sí, con socios o inversores</b><br /><span className="mute">Los socios que elijas podrán ver el proyecto donde queda la zona.</span></button>
       </div>
-      {f.con_socios ? <div className="card"><h2>¿Qué socios la verán?</h2>
+      {f.con_socios && <div className="card"><h2>¿Qué socios la verán?</h2>
         {socios.loading ? <Cargando /> : S.length ? S.map(x => <label key={x.id} className="fila" style={{ padding: "4px 0" }}>
           <input type="checkbox" checked={f.socios.includes(x.id)} onChange={e => up("socios", e.target.checked ? [...f.socios, x.id] : f.socios.filter(y => y !== x.id))} /> {x.nombre || x.email} <span className="mute">{x.email}</span></label>)
-          : <Vacio>Todavía no tienes usuarios con rol Socio. Puedes seguir y agregarlos después, cuando los crees en el menú Usuarios.</Vacio>}
-        <p className="mute">Podrás agregar, quitar o cambiar socios cuando quieras en Red → Historial de la red.</p></div>
-        : <div className="card"><h2>¿En qué proyecto va?</h2><select value={f.proyecto_id} onChange={e => up("proyecto_id", e.target.value)}><option value="">Proyecto principal (Vortex)</option>{proyectos.filter(x => x.nombre !== "Vortex").map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select>
-          <p className="mute" style={{ margin: "8px 0 0" }}>Si eliges un proyecto que ya tiene socios, ellos verán también esta zona. Para que un socio vea solo esta zona, elige "Sí, con socios o inversores".</p></div>}
+          : <Vacio>Todavía no tienes usuarios con rol Socio. Puedes seguir y agregarlos después en Configuración → Socios y proyectos.</Vacio>}
+        <p className="mute">Verán todas las zonas del proyecto elegido. Su porcentaje en las utilidades de esta zona lo defines en Finanzas → Inversores y fondos → Socios.</p></div>}
     </>}
 
     {paso === 2 && <>
@@ -153,7 +154,7 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
       <div className="card"><h2>{f.nombre}</h2><table style={{ minWidth: 0 }}><tbody>
         <tr><td className="mute">Ubicación</td><td>{f.ubicacion || "—"}</td></tr>
         <tr><td className="mute">Inicio / corte</td><td>{f.fecha_inicio} · día {f.dia_corte}</td></tr>
-        <tr><td className="mute">Acceso</td><td>{f.con_socios ? `Con socios · proyecto propio · ${f.socios.length} socio(s) elegido(s)` : "Solo mía"}</td></tr>
+        <tr><td className="mute">Proyecto y acceso</td><td>{`${proyectos.find(x => x.id === f.proyecto_id)?.nombre || "Proyecto principal"}${f.con_socios ? ` · con ${f.socios.length} socio(s) elegido(s)` : " · solo mía"}`}</td></tr>
         <tr><td className="mute">Inversores</td><td>{f.inversores.length ? `${f.inversores.length} · capital ${bs(totalInv)}` : "Ninguno"}</td></tr>
         <tr><td className="mute">Planes</td><td>{f.planes.map(p => `${p.nombre} ${p.mbps} Mbps (${bs(p.precio)})`).join(" · ")}</td></tr>
         <tr><td className="mute">NAP principal</td><td>{f.nap_si ? `${f.nap_codigo} · ${f.nap_puertos} puertos` : "Después"}</td></tr>

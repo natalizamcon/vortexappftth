@@ -31,12 +31,18 @@ export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo 
     <p className="mute" style={{ margin: "8px 0 0" }}>El precio que escribes queda anotado en este ingreso. Si fue con descuento, escribe lo que pagaste: el costo del artículo se recalcula como promedio con lo que ya tenías.</p></div>;
 }
 
-export function Almacenes({ A, M, S, zonaAlmacen, recargar, pid }: any) {
-  const [sel, setSel] = useState(zonaAlmacen || A[0]?.id || ""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+export function Almacenes({ A, M, S, E = [], zonaAlmacen, recargar, pid }: any) {
+  const [sel, setSel] = useState<string>(zonaAlmacen || ""), [cat, setCat] = useState(""), [q, setQ] = useState(""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
   const [mv, setMv] = useState({ material: "", desde: A.find((a: any) => a.tipo === "central")?.id || A[0]?.id || "", hacia: zonaAlmacen || "", cantidad: "1" });
   const movs = useQuery(() => supabase.from("movimientos").select("*, materiales(nombre, unidad), origen:almacenes!movimientos_almacen_origen_fkey(nombre), destino:almacenes!movimientos_almacen_destino_fkey(nombre)").eq("proyecto_id", pid).order("fecha", { ascending: false }).limit(40), [pid, S]);
   const valor = (a: string) => M.reduce((s: number, m: any) => s + cantEn(S, m.id, a) * n(m.costo), 0), arts = (a: string) => M.filter((m: any) => cantEn(S, m.id, a) > 0).length;
-  const alm = A.find((a: any) => a.id === sel), hay = M.filter((m: any) => cantEn(S, m.id, sel) > 0);
+  const alm = A.find((a: any) => a.id === sel), todos = !sel, nombreAlm = (id: string) => A.find((a: any) => a.id === id)?.nombre || "Sin ubicación";
+  const cantidad = (m: any) => (todos ? totalDe(S, m.id) : cantEn(S, m.id, sel)), conStock = M.filter((m: any) => cantidad(m) > 0);
+  const categorias = Array.from(new Set(conStock.map((m: any) => m.categoria || "Sin categoría"))).sort() as string[];
+  const hay = conStock.filter((m: any) => (!cat || (m.categoria || "Sin categoría") === cat) && (m.nombre + " " + (m.codigo || "")).toLowerCase().includes(q.toLowerCase())).sort((a: any, b: any) => (a.categoria || "").localeCompare(b.categoria || "") || a.nombre.localeCompare(b.nombre));
+  const valorLista = hay.reduce((s: number, m: any) => s + cantidad(m) * n(m.costo), 0);
+  const dondeEsta = (m: any) => A.filter((a: any) => cantEn(S, m.id, a.id) > 0).map((a: any) => `${a.nombre.replace(/^Almacén /, "")}: ${cantEn(S, m.id, a.id)}`).join(" · ");
+  const equipos = E.filter((e: any) => e.estado !== "INSTALADO" && e.estado !== "DESCARTE" && (todos || e.almacen_id === sel));
   const mm = M.find((m: any) => m.id === mv.material), enOrigen = mm ? cantEn(S, mm.id, mv.desde) : 0;
   const mover = async () => {
     setMsg(""); setOk(""); if (!mm) return setMsg("Elige el artículo."); if (!mv.desde || !mv.hacia) return setMsg("Elige el origen y el destino."); if (mv.desde === mv.hacia) return setMsg("El origen y el destino deben ser distintos."); if (!(n(mv.cantidad) > 0)) return setMsg("La cantidad debe ser mayor a 0."); if (n(mv.cantidad) > enOrigen) return setMsg(`En el origen solo hay ${enOrigen}.`);
@@ -45,8 +51,16 @@ export function Almacenes({ A, M, S, zonaAlmacen, recargar, pid }: any) {
   };
   const selA = (v: string, f: (x: string) => void) => <select value={v} onChange={e => f(e.target.value)}><option value="">Elige…</option>{A.map((a: any) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select>;
   return <>
-    <div className="grid gk" style={{ marginBottom: 14 }}>{A.map((a: any) => <button key={a.id} className="card kpi" style={{ textAlign: "left", cursor: "pointer", color: "var(--ink)", borderTopColor: a.id === sel ? "var(--acc)" : undefined, borderTopWidth: 3 }} onClick={() => setSel(a.id)}><span>{a.nombre}</span><b>{bs(valor(a.id))}</b><small className="mute"><span style={{ color: "var(--acct)" }}>{arts(a.id)} artículos</span> · tocar para ver</small></button>)}</div>
-    <div className="card tw"><h2>Qué hay en {alm?.nombre}</h2>{hay.length ? <table><thead><tr><th>Código</th><th>Artículo</th><th>Cantidad</th><th>Costo</th><th>Valor</th></tr></thead><tbody>{hay.map((m: any) => <tr key={m.id}><td>{m.codigo}</td><td><b>{m.nombre}</b></td><td>{cantEn(S, m.id, sel)} {m.unidad}</td><td>{bs(m.costo)}</td><td>{bs(cantEn(S, m.id, sel) * n(m.costo))}</td></tr>)}</tbody></table> : <p className="mute">Este almacén está vacío. Ingresa material o muévelo desde otro almacén.</p>}</div>
+    <div className="grid gk" style={{ marginBottom: 14 }}>{A.map((a: any) => <button key={a.id} className="card kpi" style={{ textAlign: "left", cursor: "pointer", color: "var(--ink)", borderTopColor: a.id === sel ? "var(--acc)" : undefined, borderTopWidth: 3 }} onClick={() => { setSel(a.id === sel ? "" : a.id); setCat(""); }}><span>{a.nombre}</span><b>{bs(valor(a.id))}</b><small className="mute"><span style={{ color: "var(--acct)" }}>{arts(a.id)} artículos</span> · tocar para ver</small></button>)}</div>
+    <div className="card tw"><div className="fila entre"><h2>Qué hay en {todos ? "todos los almacenes" : alm?.nombre}</h2>
+      <div className="fila"><span className="mute">Ver almacén</span><select value={sel} onChange={e => { setSel(e.target.value); setCat(""); }}><option value="">Todos los almacenes</option>{A.map((a: any) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></div></div>
+      {conStock.length ? <>
+        <div className="fila" style={{ margin: "8px 0" }}><button className={"btn chico " + (cat ? "suave" : "")} onClick={() => setCat("")}>Todo ({conStock.length})</button>{categorias.map(c => <button key={c} className={"btn chico " + (cat === c ? "" : "suave")} onClick={() => setCat(cat === c ? "" : c)}>{c} ({conStock.filter((m: any) => (m.categoria || "Sin categoría") === c).length})</button>)}<input placeholder="Buscar artículo" value={q} onChange={e => setQ(e.target.value)} style={{ marginLeft: "auto" }} /></div>
+        {hay.length ? <table><thead><tr><th>Código</th><th>Artículo</th><th>Categoría</th><th>{todos ? "Total" : "Cantidad"}</th>{todos && <th>Dónde está</th>}<th>Costo</th><th>Valor</th></tr></thead>
+          <tbody>{hay.map((m: any) => <tr key={m.id}><td>{m.codigo}</td><td><b>{m.nombre}</b></td><td>{m.categoria || "—"}</td><td><b>{cantidad(m)}</b> {m.unidad}</td>{todos && <td><small>{dondeEsta(m)}</small></td>}<td>{bs(m.costo)}</td><td>{bs(cantidad(m) * n(m.costo))}</td></tr>)}</tbody>
+          <tfoot><tr><td colSpan={todos ? 6 : 5}><b>Valor de lo que se ve</b></td><td><b>{bs(valorLista)}</b></td></tr></tfoot></table> : <Vacio>No hay artículos con ese filtro.</Vacio>}</> : <p className="mute">Este almacén está vacío. Ingresa material o muévelo desde otro almacén.</p>}</div>
+    {equipos.length > 0 && <div className="card tw"><h2>Equipos con número de serie {todos ? "(sin instalar)" : "en " + alm?.nombre}</h2><table><thead><tr><th>Serie</th><th>Modelo</th><th>MAC</th><th>Estado</th><th>Ubicación</th></tr></thead>
+      <tbody>{equipos.map((e: any) => <tr key={e.id}><td><b>{e.serie}</b></td><td>{e.modelo || "—"}</td><td>{e.mac || "—"}</td><td>{String(e.estado).charAt(0) + String(e.estado).slice(1).toLowerCase()}</td><td>{e.almacen_id ? nombreAlm(e.almacen_id) : <span style={{ color: "var(--warn)" }}>Sin ubicación registrada</span>}</td></tr>)}</tbody></table></div>}
     <div className="grid g2" style={{ alignItems: "start" }}>
       <FormIngreso key={sel} A={A} M={M} S={S} almacenInicial={sel} onListo={recargar} />
       <div className="card"><h2>Mover material de un almacén a otro</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}

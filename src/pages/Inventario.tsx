@@ -15,9 +15,10 @@ export default function Inventario() {
   const alm = useQuery(() => pid ? supabase.from("almacenes").select("*").eq("proyecto_id", pid) : Promise.resolve({ data: [], error: null }), [pid]);
   const mat = useQuery(() => pid ? supabase.from("materiales").select("*").eq("proyecto_id", pid).order("codigo").limit(2000) : Promise.resolve({ data: [], error: null }), [pid]);
   const stk = useQuery(() => pid ? supabase.from("stock").select("cantidad, almacen_id, material_id").eq("proyecto_id", pid).limit(20000) : Promise.resolve({ data: [], error: null }), [pid]);
+  const eqs = useQuery(() => pid ? supabase.from("equipos_serie").select("id, serie, modelo, mac, estado, almacen_id, cliente_id").eq("proyecto_id", pid).limit(3000) : Promise.resolve({ data: [], error: null }), [pid]);
   const A: any[] = [...((alm.data as any[]) || [])].sort((a, b) => orden(a) - orden(b) || a.nombre.localeCompare(b.nombre)), M: any[] = (mat.data as any[]) || [], S: any[] = (stk.data as any[]) || [];
-  const recargar = () => { alm.recargar(); mat.recargar(); stk.recargar(); };
-  const props = { pid, A, M, S, recargar, zonaAlmacen: A.find(a => a.zona_id === zonaId)?.id || "" };
+  const recargar = () => { alm.recargar(); mat.recargar(); stk.recargar(); eqs.recargar(); };
+  const props = { pid, A, M, S, E: ((eqs.data as any[]) || []), recargar, zonaAlmacen: A.find(a => a.zona_id === zonaId)?.id || "" };
   return <>
     <h1>Inventario</h1>
     <Tabs items={[["almacenes", "Almacenes"], ["panel", "Panel de inventario"], ["materiales", "Materiales y equipos"]]} valor={tab} onChange={setTab} />

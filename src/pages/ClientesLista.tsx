@@ -11,12 +11,11 @@ import { PanelHistorial } from "./ClientesCobranzas";
 const cr = (x: any) => (Array.isArray(x) ? x[0] : x) || {};
 const F0 = { nombre: "", ci: "", telefono: "", ref_nombre: "", ref_tel: "", direccion: "", lat: "", lng: "", plan_id: "", nap_id: "", puerto: "", fecha: hoy(), precio_instalacion: "0", equipo: "", serie: "", mac: "", ip: "", potencia: "", usuario_tecnico: "", clave_tecnica: "", tecnico: "", observaciones: "" };
 const aDatos = (p: Promise<any[]>) => p.then(data => ({ data, error: null })).catch(e => ({ data: [] as any[], error: { message: e.message } }));
-const ROLES_COBRANZA = ["admin", "socio", "cobranzas", "financiero", "supervisor"];
 const Pill = ({ c }: { c: { texto: string; clase: string } }) => <span className={"pill " + c.clase}>{c.texto}</span>;
 
 export function ListaClientes({ filtroInicial }: { filtroInicial?: string }) {
-  const { zonaId, proyectoId, perfil } = useApp(), al = useAlcance(), dep = [proyectoId, zonaId], verCobranza = ROLES_COBRANZA.includes(perfil?.rol || "");
-  const [q, setQ] = useState(""), [fe, setFe] = useState(filtroInicial || ""), [nuevo, setNuevo] = useState(false), [baja, setBaja] = useState<any>(null), [ficha, setFicha] = useState<any>(null), [pago, setPago] = useState<any>(null), [hist, setHist] = useState<any>(null);
+  const { zonaId, proyectoId, puede } = useApp(), al = useAlcance(), dep = [proyectoId, zonaId], verCobranza = puede("cobranzas", "ver");
+  const [q, setQ] = useState(() => { const v = sessionStorage.getItem("vx_q") || ""; sessionStorage.removeItem("vx_q"); return v; }), [fe, setFe] = useState(filtroInicial || ""), [nuevo, setNuevo] = useState(false), [baja, setBaja] = useState<any>(null), [ficha, setFicha] = useState<any>(null), [pago, setPago] = useState<any>(null), [hist, setHist] = useState<any>(null);
   const lista = useQuery(() => al(supabase.from("clientes").select("*, zonas(nombre), naps(codigo), puertos!clientes_puerto_id_fkey(numero), clientes_credenciales(*)").order("estado").order("nombre").limit(1000)), dep);
   const cob = useQuery(() => aDatos(todas(() => al(supabase.from("v_cobranza").select("*").order("cliente_id")))), dep);
   const comp = useQuery(() => aDatos(todas(() => al(supabase.from("v_comportamiento").select("*").order("cliente_id")))), dep);

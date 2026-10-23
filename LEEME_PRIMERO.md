@@ -186,3 +186,13 @@ git push origin main
 4. **Destinatarios y reglas:** el administrador marca qué rol recibe cada alerta; cada usuario ve solo las alertas que le corresponden según su rol y sus proyectos.
 5. El numerito del menú cuenta todas las alertas activas.
 6. `sql/3_verificar_instalacion.sql` ahora tiene 23 filas en OK.
+
+### Novedades de la 3.3 · Configuración y Dashboard
+1. En Supabase → SQL Editor ejecuta `sql/18_configuracion.sql` (después del 17; no borra datos y los usuarios que ya tienes siguen igual).
+2. **Configuración** (al final del menú): Usuarios · Roles y permisos · Socios y proyectos · Zonas · Papelera.
+   - Usuarios: al tocar uno se abre su ficha con rol, estado, proyectos y **zonas** (si no marcas zonas, ve todas las del proyecto; la base de datos le oculta las demás).
+   - Roles y permisos: matriz Ver / Crear / Editar / Eliminar por módulo, activar o desactivar roles y crear roles propios.
+   - Socios y proyectos: registrar socio, crear proyecto, asignar proyectos, activar o desactivar.
+3. **Dashboard** nuevo (Dashboard primero en el menú): período con fechas, CAPEX y recuperación, 8 indicadores, evolución del negocio (a la mitad del ancho), Cobranzas, Finanzas, Red FTTH, Operaciones, próximas tareas y actividad reciente.
+4. Barra superior con **buscador** (clientes, NAP, equipos), campana de alertas y menú de usuario.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 24 filas en OK.

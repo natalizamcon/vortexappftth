@@ -24,7 +24,7 @@ function MapaProvisional() {
 }
 
 export default function Red() {
-  const [tab, setTab] = useState("panel"), [sub, setSub] = useState("troncales"), [troncalSel, setTroncalSel] = useState("");
+  const [tab, setTab] = useState(() => { const v = sessionStorage.getItem("vx_tab_red") || "panel"; sessionStorage.removeItem("vx_tab_red"); return v; }), [sub, setSub] = useState("troncales"), [troncalSel, setTroncalSel] = useState("");
   /** Para el panel: ir a una pestaña (y a una sub-pestaña de "Troncales y postes"). */
   const irPanel = (t: string, s?: string) => { setTab(t); if (s) setSub(s); };
   /** Para troncales: abrir los hilos de una troncal concreta. */

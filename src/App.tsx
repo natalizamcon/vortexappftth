@@ -4,39 +4,40 @@ import { configurado } from "./lib/supabase";
 import { Aviso, Cargando } from "./lib/ui";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Zonas from "./pages/Zonas";
 import Clientes from "./pages/Clientes";
 import Red from "./pages/Red";
 import Servicios from "./pages/Servicios";
 import Inventario from "./pages/Inventario";
 import Finanzas from "./pages/Finanzas";
-import Usuarios from "./pages/Usuarios";
 import Papelera from "./pages/Papelera";
 import Configuracion from "./pages/Configuracion";
 import Alertas from "./pages/Alertas";
 import Formularios from "./pages/Formularios";
 import Reportes from "./pages/Reportes";
-import { AlertasProvider, ContadorAlertas } from "./lib/alertas";
+import { AlertasProvider, ContadorAlertas, useAlertas } from "./lib/alertas";
+import { BuscadorGlobal } from "./pages/BuscadorGlobal";
 
-const RUTAS: [string, string, string[] | null][] = [
-  ["dashboard", "Dashboard", null], ["red", "Red", null], ["clientes", "Clientes", null], ["servicios", "Instalaciones y servicios", null], ["inventario", "Inventario", null],
-  ["finanzas", "Finanzas", ["admin", "socio", "financiero"]], ["formularios", "Formularios", null], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", null], ["configuracion", "Configuración", ["admin"]],
+const RUTAS: [string, string, string | null][] = [
+  ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
+  ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
 ];
+const MODULO_RUTA: Record<string, string> = { red: "red", clientes: "clientes", cobranzas: "cobranzas", servicios: "instalaciones", campo: "instalaciones", inventario: "inventario", finanzas: "finanzas", formularios: "formularios", reportes: "reportes" };
 const CONFIG = ["configuracion", "zonas", "usuarios", "papelera"];
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
 export default function App() {
-  const { cargando, sesion, perfil, proyectos, zonas, proyectoId, setProyectoId, zonaId, setZonaId, salir } = useApp();
-  const ruta = useHash();
+  const { cargando, sesion, perfil, proyectos, zonas, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede } = useApp();
+  const ruta = useHash(), [busq, setBusq] = useState(0);
   if (!configurado) return <div className="login"><img src="/logo.png" alt="Vortex" /><Aviso tipo="mal"><b>Falta conectar Supabase.</b> Abre el archivo <code>src/config.ts</code> y pega tu Project URL y tu clave pública (paso 4 de la guía).</Aviso></div>;
   if (cargando) return <div className="login"><img src="/logo.png" alt="Vortex" /><Cargando /></div>;
   if (!sesion) return <Login />;
   if (!perfil || perfil.rol === "pendiente" || !perfil.activo) return <div className="login"><img src="/logo.png" alt="Vortex" /><Aviso>Tu cuenta ({sesion.user.email}) todavía no tiene acceso. Pide al administrador que te asigne un rol y un proyecto.</Aviso><button className="btn suave" onClick={salir}>Salir</button></div>;
-  const items = RUTAS.filter(([, , roles]) => !roles || roles.includes(perfil.rol));
+  const items = RUTAS.filter(([, , m]) => !m || (m === "__admin" ? perfil.rol === "admin" : puede(m, "ver")));
   const zonasVis = zonas.filter(z => !proyectoId || z.proyecto_id === proyectoId);
   const pagina = () => {
+    const modulo = MODULO_RUTA[ruta]; if (modulo && !puede(modulo, "ver")) return <Dashboard />;
     switch (ruta) {
-      case "configuracion": case "zonas": case "usuarios": case "papelera": return perfil.rol === "admin" ? <Configuracion inicial={ruta === "configuracion" ? undefined : ruta} /> : <Dashboard />;
+      case "configuracion": case "zonas": case "usuarios": case "papelera": case "roles": case "socios": return perfil.rol === "admin" ? <Configuracion inicial={ruta === "configuracion" ? undefined : ruta} /> : <Dashboard />;
       case "clientes": case "cobranzas": return <Clientes inicial={ruta === "cobranzas" ? "cobranzas" : undefined} />; case "red": return <Red />;
       case "servicios": case "campo": return <Servicios />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
       default: return <Dashboard />;
@@ -47,8 +48,14 @@ export default function App() {
     <div className="barra">
       {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los proyectos" : "Todos mis proyectos"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
       <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
-      <span className="mute" style={{ marginLeft: "auto" }}>{perfil.nombre || perfil.email} · {perfil.rol}</span><button className="btn suave chico" onClick={salir}>Salir</button>
+      <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); }} />
+      <Campana />
+      <details className="menu-usuario"><summary>👤 {perfil.nombre || perfil.email} ▾</summary><div className="desplegable"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{perfil.email}</small><br /><small className="mute">Rol: {NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div></div></details>
     </div>
-    <main>{pagina()}</main>
+    <main key={busq}>{pagina()}</main>
   </AlertasProvider>;
 }
+
+const NOMBRE_ROL: Record<string, string> = { admin: "Administrador principal", socio: "Socio", supervisor: "Supervisor técnico", tecnico: "Técnico", cobranzas: "Cobranzas", almacen: "Almacén", financiero: "Financiero" };
+/** Campana de la barra superior: cuántas alertas activas hay. */
+function Campana() { const { alertas } = useAlertas(); return <a className="campana" href="#/alertas" title="Centro de alertas" aria-label="Centro de alertas">🔔{alertas.length > 0 && <b>{alertas.length}</b>}</a>; }

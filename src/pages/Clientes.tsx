@@ -9,14 +9,13 @@ import { Pagos } from "./ClientesPagos";
 import { RegistroPagos } from "./ClientesRegistro";
 import { BotonesNuevo } from "./NuevoProyectoZona";
 
-const ROLES_COBRANZA = ["admin", "socio", "cobranzas", "financiero", "supervisor"];
-
 /** Clientes: panel, base de datos, paquetes y todo lo de cobranza en un solo lugar. */
 export default function Clientes({ inicial }: { inicial?: string }) {
-  const { perfil } = useApp(), verCob = ROLES_COBRANZA.includes(perfil?.rol || "");
-  const [tab, setTab] = useState(inicial || "panel"), [filtro, setFiltro] = useState("");
+  const { puede } = useApp(), verCob = puede("cobranzas", "ver"), verPagos = puede("pagos", "ver");
+  const [tab, setTab] = useState(inicial || sessionStorage.getItem("vx_tab_clientes") || "panel"), [filtro, setFiltro] = useState("");
+  sessionStorage.removeItem("vx_tab_clientes");
   const ir = (t: string, f?: string) => { setFiltro(f || ""); setTab(t); };
-  const items: [string, string][] = [["panel", "Panel de clientes"], ["lista", "Clientes"], ["paquetes", "Paquetes"], ...(verCob ? [["cobranzas", "Cobranzas"], ["pagos", "Pagos"], ["registro", "Registro de pagos"]] as [string, string][] : [])];
+  const items: [string, string][] = [["panel", "Panel de clientes"], ["lista", "Clientes"], ["paquetes", "Paquetes"], ...(verCob ? [["cobranzas", "Cobranzas"]] as [string, string][] : []), ...(verPagos ? [["pagos", "Pagos"], ["registro", "Registro de pagos"]] as [string, string][] : [])];
   const actual = items.some(([k]) => k === tab) ? tab : "panel";
   return <>
     <h1>Clientes</h1>

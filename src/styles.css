@@ -116,3 +116,12 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .pill.crit{background:var(--badb);color:var(--bad)}.pill.alta{background:#fde6cf;color:#c4651a}.pill.media{background:var(--warnb);color:var(--warn)}.pill.baja{background:#d9f6f7;color:var(--acct)}
 .reglas td,.reglas th{vertical-align:middle}.reglas .subtitulo td{background:var(--lilb);font-weight:700;color:var(--ink)}
 a.btn{text-decoration:none}
+
+/* ---------- Barra superior: buscador, campana y menú de usuario ---------- */
+.buscador{position:relative;flex:1 1 280px;max-width:520px;margin-left:auto}.buscador input{width:100%}
+.buscador-res{position:absolute;top:100%;left:0;right:0;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #10142c33;margin-top:4px;max-height:360px;overflow:auto}
+.buscador-res button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 10px;cursor:pointer;font:inherit}.buscador-res button:hover{background:var(--lilb)}
+.campana{position:relative;text-decoration:none;font-size:18px;padding:2px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+.campana b{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:99px;padding:0 6px;font-size:11px}
+.menu-usuario{position:relative}.menu-usuario summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:5px 10px;background:var(--panel)}.menu-usuario summary::-webkit-details-marker{display:none}
+.menu-usuario .desplegable{position:absolute;right:0;top:100%;z-index:40;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #10142c33;padding:10px;min-width:220px}

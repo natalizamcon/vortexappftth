@@ -10,6 +10,7 @@ import Compras from "./Compras";
 import { IngresosGastos, Rentabilidad } from "./FinanzasPanel";
 import { CajaFondos, CostosCompartidos, GastosEmpresa, MiReparto } from "./FinanzasReparto";
 import { PagosPersonal } from "./FinanzasPersonal";
+import { SociosFinanzas } from "./FinanzasSocios";
 
 /** Finanzas ordenada en carpetas: cada carpeta agrupa lo que va junto. */
 export default function Finanzas() {
@@ -17,7 +18,7 @@ export default function Finanzas() {
   const socio = perfil?.rol === "socio", par = (x: [string, string][], si: boolean) => (si ? x : []);
   const carpetas: [string, string, [string, string][]][] = [
     ["panel", "Panel", [["rent", "Rentabilidad"], ["mov", "Ingresos y gastos"]]],
-    ["inv", "Inversores y fondos", [["inv", "Inversores"], ...par([["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
+    ["inv", "Inversores y fondos", [["inv", "Inversores"], ...par([["soc", "Socios"], ["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
     ["sim", "Simulador y presupuesto", [["sim", "Simulador de proyecto"], ["pre", "Presupuesto de la zona"], ["vs", "Presupuesto vs real"]]],
     ["costos", "Costos y compras", [...par([["comp", "Costos compartidos"], ["emp", "Gastos de la empresa"], ["compras", "Compras de la empresa"]], admin), ["per", "Pagos al personal"]]],
   ];
@@ -30,6 +31,7 @@ export default function Finanzas() {
     {clave === "panel:rent" && <Rentabilidad />}
     {clave === "panel:mov" && <IngresosGastos />}
     {clave === "inv:inv" && <Inversores />}
+    {clave === "inv:soc" && <SociosFinanzas />}
     {clave === "inv:fon" && <CajaFondos />}
     {clave === "inv:mi" && <MiReparto />}
     {clave === "sim:sim" && <Simulador />}

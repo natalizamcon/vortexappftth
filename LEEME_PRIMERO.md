@@ -171,3 +171,10 @@ git push origin main
 6. **Instalaciones y servicios:** Panel operativo con órdenes de trabajo · Instalaciones · Bajas · Mantenimientos · Instaladores · Avance y viajes (Avance del plan, Viajes y gastos con seguimiento, Diario de la zona y Gastos adicionales).
 7. Al **finalizar un viaje**, su costo pasa solo a gastos operativos (Transporte). No se crea retroactivamente para viajes ya finalizados.
 8. `sql/3_verificar_instalacion.sql` ahora tiene 21 filas en OK.
+
+### Novedades de la 3.1 · Inventario como en el prototipo + socios en Finanzas
+1. En Supabase → SQL Editor ejecuta `sql/16_inventario_y_socios.sql` (después del 15; no borra datos).
+2. **Inventario** tiene 3 pestañas: Almacenes · Panel de inventario · Materiales y equipos (con Materiales y Equipos con serie). Cada proyecto tiene su almacén central, un almacén por zona y uno de vehículo / técnico.
+3. **Precio editable:** al ingresar material (o comprar desde Materiales) escribes el precio realmente pagado; el costo del artículo pasa a ser el promedio entre lo que había y lo comprado. El costo también se puede cambiar directo en la tabla de Materiales.
+4. **Finanzas → Inversores y fondos → Socios:** agregar un socio nuevo o existente a una zona (con su %) o a un proyecto, y quitarlo.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 22 filas en OK.

@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 21 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 22 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -120,4 +120,11 @@ select n, comprobacion, resultado, estado from (
                and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_instalaciones_lista','v_actividades','v_bajas_lista')) = 3
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('crear_proyecto','gestionar_socio_zona','completar_baja')) = 3
               then 'OK' else 'FALTA: ejecuta 15_servicios_y_proyectos.sql' end
+  union all
+  select 22, 'Inventario y socios (archivo 16)',
+         ((select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'materiales' and column_name in ('codigo','marca','modelo'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_compra','agregar_socio','quitar_socio')))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'materiales' and column_name in ('codigo','marca','modelo')) = 3
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_compra','agregar_socio','quitar_socio')) = 3
+              then 'OK' else 'FALTA: ejecuta 16_inventario_y_socios.sql' end
 ) r order by n;

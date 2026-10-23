@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 25 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 26 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -148,4 +148,8 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'compras_empresa' and column_name in ('proyecto_id','almacen_id','material_id')) = 3
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_compra_empresa','mover_compra_empresa','ingresar_compra_empresa')) = 3
               then 'OK' else 'FALTA: ejecuta 19_zonas_y_compras.sql' end
+  union all
+  select 26, 'Mapa GPS: trazados (archivo 20)',
+         (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'trazados_gps')::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'trazados_gps') = 1 then 'OK' else 'FALTA: ejecuta 20_mapa_gps.sql' end
 ) r order by n;

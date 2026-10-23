@@ -203,3 +203,10 @@ git push origin main
 3. **Compras de la empresa** entran solas al inventario (proyecto y almacén que elijas, con el precio pagado). Las compras que ya tenías pasan una vez al inventario del proyecto principal. Si cambias el almacén de una compra, el material se mueve.
 4. **Inventario → Almacenes:** selector "Ver almacén" (Todos o uno), con la lista de materiales, herramientas y demás de ese almacén, filtro por categoría, búsqueda y los equipos con serie.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 25 filas en OK.
+
+### Novedades de la 3.5 · Mapa GPS y lectura de fotos con IA
+1. En Supabase → SQL Editor ejecuta `sql/20_mapa_gps.sql` (después del 19; solo crea la tabla de trazados).
+2. **Red → Mapa:** mapa con NAP, postes, clientes y trazados de fibra (calle o satélite), capas que se prenden y apagan, importar archivos **KML, KMZ y GPX**, exportar a KML, "Ubicarme" y crear un poste tocando el mapa.
+3. **Lectura de fotos con IA** (etiqueta del equipo, potencia, carnet y comprobante de pago). Para activarla sigue `GUIA_FOTOS_IA.md` (3 variables en Netlify).
+4. En Nueva instalación también hay un botón **📍 Usar mi ubicación** para llenar el GPS del cliente.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 26 filas en OK.

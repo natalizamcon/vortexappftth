@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, subirArchivo } from "../lib/supabase";
+import { LectorFoto } from "../lib/LectorFoto";
 import { aPapelera } from "../lib/papelera";
 import { Aviso, Campo, Vacio, bs, useProyecto } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
@@ -11,11 +12,12 @@ const n = (x: any) => Number(x) || 0;
 const CATEGORIAS = ["ONT/ONU", "Cable", "Ferretería", "Accesorio", "Conector", "Herramienta", "Otros"];
 
 export function MaterialesEquipos(p: any) {
-  const [sub, setSub] = useState("mat"), pid = useProyecto() || p.pid;
+  const [sub, setSub] = useState("mat"), [ver, setVer] = useState(0), pid = useProyecto() || p.pid;
   return <>
     <div className="subtabs">{[["mat", "Materiales"], ["eq", "Equipos con serie"]].map(([k, l]) => <button key={k} className={sub === k ? "on" : ""} onClick={() => setSub(k)}>{l}</button>)}</div>
     {sub === "mat" && <Materiales {...p} />}
-    {sub === "eq" && (pid ? <Crud titulo="Equipos con número de serie" tabla="equipos_serie" campos={[{ k: "serie", l: "Serie", req: true }, { k: "modelo", l: "Modelo" }, { k: "mac", l: "MAC" }, { k: "estado", l: "Estado", t: "select", opts: ["ALMACEN", "INSTALADO", "MANTENIMIENTO", "DESCARTE", "PENDIENTE"], def: "ALMACEN" }, { k: "proveedor", l: "Proveedor", def: "Digicorp" }, { k: "cliente_anterior", l: "Cliente anterior" }, { k: "foto_path", l: "Foto del equipo", t: "archivo", bucket: "fotos" }]} columnas={["serie", "modelo", "mac", "estado", "proveedor", "cliente_anterior"]} /> : <Aviso>Primero elige un proyecto o una zona.</Aviso>)}
+    {sub === "eq" && pid && <EquipoDesdeFoto pid={pid} A={p.A} onListo={() => setVer(x => x + 1)} />}
+    {sub === "eq" && (pid ? <Crud key={ver} titulo="Equipos con número de serie" tabla="equipos_serie" campos={[{ k: "serie", l: "Serie", req: true }, { k: "modelo", l: "Modelo" }, { k: "mac", l: "MAC" }, { k: "estado", l: "Estado", t: "select", opts: ["ALMACEN", "INSTALADO", "MANTENIMIENTO", "DESCARTE", "PENDIENTE"], def: "ALMACEN" }, { k: "proveedor", l: "Proveedor", def: "Digicorp" }, { k: "cliente_anterior", l: "Cliente anterior" }, { k: "foto_path", l: "Foto del equipo", t: "archivo", bucket: "fotos" }]} columnas={["serie", "modelo", "mac", "estado", "proveedor", "cliente_anterior"]} /> : <Aviso>Primero elige un proyecto o una zona.</Aviso>)}
   </>;
 }
 
@@ -89,4 +91,25 @@ function FormQuitar({ m, A, S, almInicial, onListo }: { m: any; A: any[]; S: any
       <Campo l="Motivo"><input value={f.motivo} onChange={e => setF({ ...f, motivo: e.target.value })} placeholder="Ej.: se mojó, se perdió en el viaje" /></Campo></div>
     <p className="mute">{TIPOS_QUITAR.find(t => t[0] === f.tipo)?.[2]} Las pérdidas y los ajustes los autoriza el administrador.</p>
     <button className="btn" style={{ width: "100%" }} disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Registrar"}</button></div>;
+}
+
+/** Registra un equipo con número de serie a partir de la foto de su etiqueta: la IA propone serie, MAC y modelo, tú revisas y guardas. */
+function EquipoDesdeFoto({ pid, A, onListo }: { pid: string; A: any[]; onListo: () => void }) {
+  const central = A.find((a: any) => a.tipo === "central")?.id || A[0]?.id || "";
+  const [f, setF] = useState({ serie: "", modelo: "", mac: "", almacen: central }), [foto, setFoto] = useState<File | null>(null), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [k, setK] = useState(0);
+  const guardar = async () => {
+    setMsg(""); setOk(""); if (!f.serie.trim()) return setMsg("Falta el número de serie."); setOcup(true);
+    try {
+      const ruta = foto ? await subirArchivo("fotos", pid, foto) : null;
+      const { error } = await supabase.from("equipos_serie").insert({ proyecto_id: pid, serie: f.serie.trim(), modelo: f.modelo.trim() || null, mac: f.mac.trim() || null, estado: "ALMACEN", almacen_id: f.almacen || null, foto_path: ruta, proveedor: "Digicorp" });
+      if (error) throw new Error(/duplicate key|unique/i.test(error.message) ? "Ya existe un equipo con ese número de serie." : error.message);
+      setOk("Equipo guardado en el inventario."); setF({ ...f, serie: "", modelo: "", mac: "" }); setFoto(null); setK(x => x + 1); onListo();
+    } catch (e: any) { setMsg(e.message); }
+    setOcup(false);
+  };
+  return <div className="card"><h2>Registrar equipo con la foto de su etiqueta</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
+    <LectorFoto key={k} tipo="etiqueta_equipo" titulo="Foto de la etiqueta" onArchivo={setFoto} onUsar={d => setF(x => ({ ...x, serie: d.serie || x.serie, mac: d.mac || x.mac, modelo: d.modelo || x.modelo }))} />
+    <div className="form"><Campo l="Número de serie"><input value={f.serie} onChange={e => setF({ ...f, serie: e.target.value })} /></Campo><Campo l="Modelo"><input value={f.modelo} onChange={e => setF({ ...f, modelo: e.target.value })} /></Campo><Campo l="MAC"><input value={f.mac} onChange={e => setF({ ...f, mac: e.target.value })} /></Campo>
+      <Campo l="Almacén donde queda"><select value={f.almacen} onChange={e => setF({ ...f, almacen: e.target.value })}>{A.map((a: any) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></Campo></div>
+    <button className="btn" disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Guardar equipo"}</button><p className="mute" style={{ margin: "8px 0 0" }}>Si no quieres usar la foto, escribe los datos a mano o usa la tabla de abajo.</p></div>;
 }

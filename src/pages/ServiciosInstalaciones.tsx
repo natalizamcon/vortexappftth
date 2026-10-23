@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
+import { LectorFoto } from "../lib/LectorFoto";
+import { BotonGPS } from "../lib/BotonGPS";
 import type { Accion } from "./Servicios";
 
 const n = (x: any) => Number(x) || 0;
@@ -52,7 +54,8 @@ function FormInstalacion({ zona, orden, onClose, onListo }: { zona: any; orden: 
 
   return <Drawer titulo={"Nueva instalación · zona " + zona.nombre} ancho={520} onClose={onClose}>{msg && <Aviso tipo="mal">{msg}</Aviso>}
     <h3 style={{ marginTop: 0 }}>Cliente nuevo</h3>
-    <div className="form" style={{ gridTemplateColumns: "1fr" }}>{T("Nombre completo *", "nombre")}{T("Carnet de identidad (C.I.)", "ci")}{T("Teléfono principal", "telefono", "tel")}{T("Nombre de la referencia", "ref_nombre")}{T("Número de la referencia", "ref_tel", "tel")}{T("Ubicación exacta", "direccion")}{T("Coordenadas GPS", "gps", "text", "-17.39, -66.15")}</div>
+    <LectorFoto tipo="carnet" titulo="Leer el carnet con foto" onUsar={d => setF((x: any) => ({ ...x, nombre: d.nombre || x.nombre, ci: d.ci ? String(d.ci) + (d.extension ? " " + d.extension : "") : x.ci }))} />
+    <div className="form" style={{ gridTemplateColumns: "1fr" }}>{T("Nombre completo *", "nombre")}{T("Carnet de identidad (C.I.)", "ci")}{T("Teléfono principal", "telefono", "tel")}{T("Nombre de la referencia", "ref_nombre")}{T("Número de la referencia", "ref_tel", "tel")}{T("Ubicación exacta", "direccion")}{T("Coordenadas GPS", "gps", "text", "-17.39, -66.15")}<div><BotonGPS onPunto={t => set("gps", t)} /></div></div>
     <h3>Servicio y equipo</h3>
     <div className="form" style={{ gridTemplateColumns: "1fr" }}>
       <Campo l="Plan *"><select value={f.plan_id} onChange={e => set("plan_id", e.target.value)}><option value="">Elige…</option>{((planes.data as any[]) || []).map(p => <option key={p.id} value={p.id}>{p.nombre} · {p.mbps} Mbps · {bs(p.precio)}</option>)}</select></Campo>
@@ -60,7 +63,8 @@ function FormInstalacion({ zona, orden, onClose, onListo }: { zona: any; orden: 
       {f.nap_id && <p style={{ margin: 0 }}>{L.length ? <>Puerto asignado: <b>{puerto}</b> {L.length > 1 && <a style={{ cursor: "pointer" }} onClick={() => setOtroPuerto(!otroPuerto)}>· elegir otro</a>}</> : <span style={{ color: "var(--bad)" }}>Esta NAP no tiene puertos libres. Elige otra NAP.</span>}</p>}
       {otroPuerto && L.length > 1 && <select value={puerto} onChange={e => set("puerto", e.target.value)}>{L.map(p => <option key={p.numero}>{p.numero}</option>)}</select>}
       <Campo l="Equipo"><select value={f.equipo_id} onChange={e => elegirEquipo(e.target.value)}><option value="">Otro (lo escribo abajo)</option>{((equipos.data as any[]) || []).map(x => <option key={x.id} value={x.id}>{x.modelo || "Equipo"} · {x.serie}</option>)}</select></Campo>
-      {!f.equipo_id && T("Modelo del equipo", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}{T("Potencia óptica", "potencia")}{T("Usuario técnico", "usuario_tecnico")}{T("Contraseña técnica", "clave_tecnica")}
+      <LectorFoto tipo="etiqueta_equipo" titulo="Leer la etiqueta del equipo con foto" onUsar={d => setF((x: any) => ({ ...x, serie: d.serie || x.serie, mac: d.mac || x.mac, equipo: x.equipo_id ? x.equipo : d.modelo || x.equipo }))} />
+      {!f.equipo_id && T("Modelo del equipo", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}<LectorFoto tipo="potencia" titulo="Leer la potencia con foto del medidor" onUsar={d => d.potencia_dbm !== null && d.potencia_dbm !== undefined && set("potencia", String(d.potencia_dbm))} />{T("Potencia óptica", "potencia")}{T("Usuario técnico", "usuario_tecnico")}{T("Contraseña técnica", "clave_tecnica")}
       <Campo l="Técnico">{otroTec || !((tecnicos.data as any[]) || []).length ? <input value={f.tecnico} onChange={e => set("tecnico", e.target.value)} placeholder="Nombre del técnico" /> : <select value={f.tecnico} onChange={e => e.target.value === "__otro" ? (setOtroTec(true), set("tecnico", "")) : set("tecnico", e.target.value)}><option value="">Elige…</option>{((tecnicos.data as any[]) || []).map(x => <option key={x.nombre}>{x.nombre}</option>)}<option value="__otro">Otro (escribir)</option></select>}</Campo>
       {T("Fecha de instalación", "fecha", "date")}{T("Precio de instalación (Bs)", "precio_instalacion", "number")}{T("Costo de materiales (Bs, opcional)", "costo_materiales", "number")}{T("Mano de obra (Bs, opcional)", "mano_obra", "number")}{T("Observaciones", "observaciones")}</div>
     <p className="mute">El primer mes se cobra proporcional a los días reales hasta el corte de la zona.</p>

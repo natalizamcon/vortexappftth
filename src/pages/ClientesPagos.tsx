@@ -3,6 +3,7 @@ import { supabase, subirArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { MES_CORTO } from "../lib/datos";
+import { LectorFoto } from "../lib/LectorFoto";
 import { primeroDeMes, repartoPago, r2 } from "../lib/pagos";
 
 const n = (x: any) => Number(x) || 0;
@@ -51,6 +52,7 @@ export function FormPago({ clientes, clienteId: fijo, onListo }: { clientes: any
         {atajos.length > 0 && <div className="fila">{atajos.map(([l, v, t]) => <button key={l} type="button" className="btn suave" title={t} onClick={() => setMonto(String(v))}>{l}</button>)}</div>}
         <Campo l="Medio de pago"><select value={medio} onChange={e => setMedio(e.target.value)}>{MEDIOS.map(m => <option key={m}>{m}</option>)}</select></Campo>
         <Campo l="Comprobante (obligatorio)"><input type="file" accept="image/*,.pdf" key={String(ok)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo>
+        <LectorFoto tipo="comprobante" titulo="Leer el comprobante con IA" archivo={arch} onUsar={d => { if (d.monto) setMonto(String(d.monto)); if (d.referencia && !obs) setObs("Ref. " + d.referencia + (d.banco ? " · " + d.banco : "")); }} />
         <Campo l="Mes que se paga"><select value={periodo} onChange={e => setPeriodo(e.target.value)}>{meses.map(m => <option key={m} value={m}>{mesYear(m)}</option>)}</select></Campo>
         <Campo l="Estado del cliente">{c?.estado_servicio === "SUSPENDIDO"
           ? <select value={reconectar} onChange={e => setReconectar(e.target.value)}><option value="si">Reconectar el servicio</option><option value="no">Mantener suspendido</option></select>

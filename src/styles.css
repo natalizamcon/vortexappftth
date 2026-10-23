@@ -111,3 +111,8 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--bg)}
 .chip-pago.cubierto{background:var(--okb);border-color:#b9e3c9}.chip-pago.parcial{background:var(--warnb);border-color:#ecd49a}.chip-pago.ya{background:#eef0f4}
 .ficha-sec{margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
 .e-PROGRAMADA,.e-PAUSADA{background:var(--warnb);color:var(--warn)}
+
+/* ---------- Centro de alertas: prioridades ---------- */
+.pill.crit{background:var(--badb);color:var(--bad)}.pill.alta{background:#fde6cf;color:#c4651a}.pill.media{background:var(--warnb);color:var(--warn)}.pill.baja{background:#d9f6f7;color:var(--acct)}
+.reglas td,.reglas th{vertical-align:middle}.reglas .subtitulo td{background:var(--lilb);font-weight:700;color:var(--ink)}
+a.btn{text-decoration:none}

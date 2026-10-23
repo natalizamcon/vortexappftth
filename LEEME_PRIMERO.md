@@ -178,3 +178,11 @@ git push origin main
 3. **Precio editable:** al ingresar material (o comprar desde Materiales) escribes el precio realmente pagado; el costo del artículo pasa a ser el promedio entre lo que había y lo comprado. El costo también se puede cambiar directo en la tabla de Materiales.
 4. **Finanzas → Inversores y fondos → Socios:** agregar un socio nuevo o existente a una zona (con su %) o a un proyecto, y quitarlo.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 22 filas en OK.
+
+### Novedades de la 3.2 · Centro de alertas
+1. En Supabase → SQL Editor ejecuta `sql/17_alertas_centro.sql` (después del 16; no borra datos).
+2. **Centro de alertas** tiene 3 pestañas: Activas · Historial · Destinatarios y reglas. Las alertas tienen 4 prioridades (Crítica, Alta, Media, Baja) y se separan por proyecto y zona.
+3. **Revisada** y **Resolver** (con nota opcional) mueven la alerta al Historial; allí se puede **Reabrir**. Si el problema cambia (por ejemplo, de 2 a 3 clientes con deuda), la alerta vuelve a aparecer sola.
+4. **Destinatarios y reglas:** el administrador marca qué rol recibe cada alerta; cada usuario ve solo las alertas que le corresponden según su rol y sus proyectos.
+5. El numerito del menú cuenta todas las alertas activas.
+6. `sql/3_verificar_instalacion.sql` ahora tiene 23 filas en OK.

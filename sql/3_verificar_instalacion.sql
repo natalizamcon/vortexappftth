@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 22 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 23 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -127,4 +127,11 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'materiales' and column_name in ('codigo','marca','modelo')) = 3
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_compra','agregar_socio','quitar_socio')) = 3
               then 'OK' else 'FALTA: ejecuta 16_inventario_y_socios.sql' end
+  union all
+  select 23, 'Centro de alertas (archivo 17)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('alertas_reglas','alertas_estado'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('marcar_alerta','reabrir_alerta')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('alertas_reglas','alertas_estado')) = 2
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('marcar_alerta','reabrir_alerta')) = 2
+              then 'OK' else 'FALTA: ejecuta 17_alertas_centro.sql' end
 ) r order by n;

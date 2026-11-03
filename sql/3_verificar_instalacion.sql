@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 29 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 30 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -172,4 +172,11 @@ select n, comprobacion, resultado, estado from (
   select 29, 'Inversores en dólares o bolivianos y comprobante (archivo 23)',
          (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name in ('moneda','monto_original','tipo_cambio','interes_modo','interes_monto','interes_base','comprobante_path'))::text,
          case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name in ('moneda','monto_original','tipo_cambio','interes_modo','interes_monto','interes_base','comprobante_path')) = 7 then 'OK' else 'FALTA: ejecuta 23_inversores_moneda.sql' end
+  union all
+  select 30, 'Eliminar proyectos y zonas, y propósito de la inversión (archivo 24)',
+         ((select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name = 'proposito')
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('resumen_eliminacion','eliminar_definitivo')))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name = 'proposito') = 1
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('resumen_eliminacion','eliminar_definitivo')) = 2
+              then 'OK' else 'FALTA: ejecuta 24_eliminar_y_propositos.sql' end
 ) r order by n;

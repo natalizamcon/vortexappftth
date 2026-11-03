@@ -34,6 +34,7 @@ export function ConfigUsuarios() {
 function PanelUsuario({ u, nuevo, roles, permisos, PU, UZ, onClose, onListo }: { u?: any; nuevo: boolean; roles: any[]; permisos: any[]; PU: any[]; UZ: any[]; onClose: () => void; onListo: (t: string) => void }) {
   const { proyectos, zonas, perfil } = useApp();
   const [f, setF] = useState({ nombre: u?.nombre || "", email: u?.email || "", clave: "", telefono: u?.telefono || "", rol: u ? u.rol_clave || (u.rol === "pendiente" ? "pendiente" : u.rol) : "tecnico", activo: u ? (u.activo ? "si" : "no") : "si" });
+  const [okMsg, setOkMsg] = useState("");
   const [proys, setProys] = useState<string[]>(u ? PU.filter(a => a.user_id === u.id).map(a => a.proyecto_id) : []), [zs, setZs] = useState<string[]>(u ? UZ.filter(a => a.user_id === u.id).map(a => a.zona_id) : []);
   const [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false);
   const rol = roles.find(r => r.clave === f.rol), base = f.rol === "pendiente" ? "pendiente" : rol?.base || "tecnico", esAdmin = base === "admin", sinAcceso = base === "pendiente";
@@ -66,6 +67,7 @@ function PanelUsuario({ u, nuevo, roles, permisos, PU, UZ, onClose, onListo }: {
       <Campo l="Teléfono"><input type="tel" value={f.telefono} onChange={e => setF({ ...f, telefono: e.target.value })} /></Campo>
       <Campo l="Rol"><select value={f.rol} onChange={e => setF({ ...f, rol: e.target.value })}>{opciones.map(r => <option key={r.clave} value={r.clave}>{r.nombre}{r.activo ? "" : " (sin activar)"}</option>)}<option value="pendiente">Sin acceso</option></select></Campo>
       <Campo l="Estado"><select value={f.activo} onChange={e => setF({ ...f, activo: e.target.value })} disabled={u?.id === perfil?.id}><option value="si">Activo</option><option value="no">Inactivo</option></select></Campo></div>
+    {!nuevo && <div style={{ marginTop: 10 }}><button className="btn suave" onClick={async () => { setMsg(""); setOkMsg(""); const { error } = await supabase.auth.resetPasswordForEmail(u.email, { redirectTo: location.origin }); if (error) setMsg(/rate limit|seconds/i.test(error.message) ? "Se pidieron demasiados correos seguidos. Espera unos minutos." : error.message); else setOkMsg(`Le enviamos a ${u.email} un enlace para crear una contraseña nueva.`); }}>✉️ Enviar enlace para cambiar su contraseña</button>{okMsg && <p style={{ color: "var(--ok)", margin: "6px 0 0" }}>{okMsg}</p>}</div>}
     {esAdmin && <div className="aviso" style={{ marginTop: 10 }}>Administrador principal: acceso total, no necesita asignación.</div>}
     {sinAcceso && <div className="aviso" style={{ marginTop: 10 }}>Sin acceso: no podrá entrar al sistema hasta que le des un rol.</div>}
     {!esAdmin && !sinAcceso && <><h3>Proyectos y zonas</h3><p className="mute" style={{ marginTop: 0 }}>Marca los proyectos que puede ver. Si no marcas ninguna zona de un proyecto, verá todas sus zonas.</p>

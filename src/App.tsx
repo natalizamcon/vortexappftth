@@ -17,6 +17,7 @@ import Reportes from "./pages/Reportes";
 import { AlertasProvider, ContadorAlertas, useAlertas } from "./lib/alertas";
 import { BuscadorGlobal } from "./pages/BuscadorGlobal";
 import { VERSION } from "./version";
+import { CambiarClave } from "./pages/CambiarClave";
 
 const RUTAS: [string, string, string | null][] = [
   ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
@@ -27,13 +28,14 @@ const ICONOS: Record<string, string> = { dashboard: "🏠", red: "🌐", cliente
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
 export default function App() {
-  const { cargando, sesion, perfil, proyectos, zonas, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede } = useApp();
-  const ruta = useHash(), [busq, setBusq] = useState(0), [menu, setMenu] = useState(false);
+  const { cargando, sesion, perfil, proyectos, zonas, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede, recuperando, terminarRecuperacion } = useApp();
+  const ruta = useHash(), [busq, setBusq] = useState(0), [menu, setMenu] = useState(false), [claveAbierta, setClaveAbierta] = useState(false);
   useEffect(() => { setMenu(false); }, [ruta]);
   useEffect(() => { const f = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false); addEventListener("keydown", f); return () => removeEventListener("keydown", f); }, []);
   if (!configurado) return <div className="login"><img src="/logo.png" alt="Vortex" /><Aviso tipo="mal"><b>Falta conectar Supabase.</b> Abre el archivo <code>src/config.ts</code> y pega tu Project URL y tu clave pública (paso 4 de la guía).</Aviso></div>;
   if (cargando) return <div className="login"><img src="/logo.png" alt="Vortex" /><Cargando /></div>;
   if (!sesion) return <Login />;
+  if (recuperando) return <CambiarClave recuperacion onListo={() => { history.replaceState(null, "", location.pathname); terminarRecuperacion(); }} />;
   if (!perfil || perfil.rol === "pendiente" || !perfil.activo) return <div className="login"><img src="/logo.png" alt="Vortex" /><Aviso>Tu cuenta ({sesion.user.email}) todavía no tiene acceso. Pide al administrador que te asigne un rol y un proyecto.</Aviso><button className="btn suave" onClick={salir}>Salir</button></div>;
   const items = RUTAS.filter(([, , m]) => !m || (m === "__admin" ? perfil.rol === "admin" : puede(m, "ver")));
   const zonasVis = zonas.filter(z => !proyectoId || z.proyecto_id === proyectoId);
@@ -57,7 +59,7 @@ export default function App() {
         <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); setMenu(false); }} />
       </div>
       <nav>{items.map(([k, l]) => <a key={k} href={"#/" + k} className={actual === k ? "on" : ""} onClick={() => setMenu(false)}><span className="ico">{ICONOS[k]}</span><span>{l}</span>{k === "alertas" && <ContadorAlertas />}</a>)}</nav>
-      <div className="lateral-pie"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div><div className="mute" style={{ marginTop: 8, fontSize: 11 }}>Vortex · versión {VERSION}</div></div>
+      <div className="lateral-pie"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div className="fila" style={{ marginTop: 8 }}><button className="btn suave chico" onClick={() => { setMenu(false); setClaveAbierta(true); }}>🔑 Cambiar contraseña</button><button className="btn suave chico" onClick={salir}>Salir</button></div><div className="mute" style={{ marginTop: 8, fontSize: 11 }}>Vortex · versión {VERSION}</div></div>
     </aside>
     <div className="topbar">
       <button className="hamb" onClick={() => setMenu(true)} aria-label="Abrir el menú" aria-expanded={menu}><span /><span /><span /></button>
@@ -69,9 +71,10 @@ export default function App() {
       </div>
       <div className="acciones">
         <Campana />
-        <details className="menu-usuario"><summary>👤 {perfil.nombre || perfil.email} ▾</summary><div className="desplegable"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{perfil.email}</small><br /><small className="mute">Rol: {NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div></div></details>
+        <details className="menu-usuario"><summary>👤 {perfil.nombre || perfil.email} ▾</summary><div className="desplegable"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{perfil.email}</small><br /><small className="mute">Rol: {NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div className="fila" style={{ marginTop: 8 }}><button className="btn suave chico" onClick={() => setClaveAbierta(true)}>🔑 Cambiar contraseña</button><button className="btn suave chico" onClick={salir}>Salir</button></div></div></details>
       </div>
     </div>
+    {claveAbierta && <CambiarClave onClose={() => setClaveAbierta(false)} onListo={() => setClaveAbierta(false)} />}
     <main key={busq}>{pagina()}</main>
   </AlertasProvider>;
 }

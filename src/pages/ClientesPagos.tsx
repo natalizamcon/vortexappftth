@@ -4,7 +4,7 @@ import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { MES_CORTO } from "../lib/datos";
 import { LectorFoto } from "../lib/LectorFoto";
-import { primeroDeMes, repartoPago, r2 } from "../lib/pagos";
+import { montoParaMeses, primeroDeMes, repartoPago, r2 } from "../lib/pagos";
 
 const n = (x: any) => Number(x) || 0;
 export const mesYear = (d: string) => MES_CORTO[+d.slice(5, 7) - 1] + " " + d.slice(0, 4);
@@ -16,18 +16,28 @@ export function FormPago({ clientes, clienteId: fijo, onListo }: { clientes: any
   const [clienteId, setClienteId] = useState(fijo || ""), c = clientes.find(x => x.cliente_id === clienteId);
   const cargos = useQuery(() => clienteId ? supabase.from("v_cargos").select("periodo, monto, pagado, saldo, vence").eq("cliente_id", clienteId).order("periodo") : Promise.resolve({ data: [], error: null }), [clienteId]);
   const [monto, setMonto] = useState(""), [medio, setMedio] = useState(MEDIOS[0]), [arch, setArch] = useState<File | null>(null), [periodo, setPeriodo] = useState(primeroDeMes(hoy())), [obs, setObs] = useState(""), [reconectar, setReconectar] = useState("si");
-  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [nMeses, setNMeses] = useState(0);
   const C: any[] = (cargos.data as any[]) || [], precio = n(c?.precio_mensual);
 
   // al elegir cliente, el pago empieza en su mes más antiguo sin pagar
   useEffect(() => { const v = C.find(x => n(x.saldo) > 0); setPeriodo(v ? primeroDeMes(v.periodo) : primeroDeMes(hoy())); }, [clienteId, cargos.data]);
+
+  const cargosRef = C.map(x => ({ periodo: x.periodo, monto: n(x.monto), pagado: n(x.pagado) }));
+  const info = c && nMeses > 0 ? montoParaMeses({ k: nMeses, precio, desde: periodo, cargos: cargosRef }) : null;
+  const elegirMeses = (k: number) => {
+    if (!c) return setMsg("Primero elige el cliente."); setMsg("");
+    const x = montoParaMeses({ k, precio, desde: periodo, cargos: cargosRef }); setNMeses(k); setMonto(String(x.monto));
+    const a = x.meses[0], z = x.meses[x.meses.length - 1]; setObs(o => (!o || o.startsWith("Pago de ")) ? `Pago de ${k} ${k === 1 ? "mes" : "meses"} (${mesYear(a)}${k > 1 ? " a " + mesYear(z) : ""})` : o);
+  };
+  useEffect(() => { setNMeses(0); }, [clienteId]);
+  useEffect(() => { if (nMeses > 0 && c) { const x = montoParaMeses({ k: nMeses, precio, desde: periodo, cargos: cargosRef }); setMonto(String(x.monto)); } }, [periodo, cargos.data]);
 
   const meses = Array.from(new Set([...[-3, -2, -1, 0, 1, 2].map(k => mesDesp(primeroDeMes(hoy()), k)), ...C.filter(x => n(x.saldo) > 0).map(x => primeroDeMes(x.periodo)), periodo])).sort();
   const r = c && n(monto) > 0 ? repartoPago({ monto: n(monto), precio, desde: periodo, cargos: C.map(x => ({ periodo: x.periodo, monto: n(x.monto), pagado: n(x.pagado) })) }) : null;
   const asignadoDe = (p: string) => r?.tiles.find(t => t.periodo === p)?.asignado || 0;
   const deudaDespues = r2(C.filter(x => x.vence < hoy()).reduce((s, x) => s + Math.max(0, n(x.saldo) - asignadoDe(primeroDeMes(x.periodo))), 0));
   const estadoFinal = c?.estado_servicio === "SUSPENDIDO" ? null : r ? (deudaDespues <= 0 ? "Pagado" : "Con deuda pendiente (" + bs(deudaDespues) + ")") : (n(c?.deuda) > 0 ? "Con deuda pendiente" : "Pagado");
-  const atajos: [string, number, string][] = c ? [[bs(Math.round(precio * 0.6)), Math.round(precio * 0.6), "60% de la mensualidad"], [bs(precio), precio, "Un mes"], [bs(precio * 3), precio * 3, "Tres meses"], [bs(precio * 12), precio * 12, "Doce meses"], ...(n(c.deuda) > 0 ? [[`Deuda ${bs(c.deuda)}`, n(c.deuda), "Todo lo que debe"] as [string, number, string]] : [])] : [];
+  const atajos: [string, number, string][] = c ? [[bs(Math.round(precio * 0.6)), Math.round(precio * 0.6), "60% de la mensualidad"], [bs(precio), precio, "Un mes"], ...(n(c.deuda) > 0 ? [[`Deuda ${bs(c.deuda)}`, n(c.deuda), "Todo lo que debe"] as [string, number, string]] : [])] : [];
 
   const guardar = async () => {
     setMsg(""); setOk("");
@@ -48,12 +58,15 @@ export function FormPago({ clientes, clienteId: fijo, onListo }: { clientes: any
     <div className="card"><h2>Registrar pago</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
       <div className="form" style={{ gridTemplateColumns: "1fr" }}>
         <Campo l="Cliente"><select value={clienteId} onChange={e => setClienteId(e.target.value)} disabled={!!fijo}><option value="">Elige un cliente…</option>{clientes.filter(x => x.estado_cuenta !== "BAJA").map(x => <option key={x.cliente_id} value={x.cliente_id}>{x.codigo} — {x.nombre} ({bs(x.precio_mensual)})</option>)}</select></Campo>
+        <Campo l="Pagan desde el mes"><select value={periodo} onChange={e => setPeriodo(e.target.value)}>{meses.map(m => <option key={m} value={m}>{mesYear(m)}</option>)}</select></Campo>
+        <Campo l="¿Cuántos meses paga?"><div className="fila">{[1, 2, 3, 6, 12].map(k => <button key={k} type="button" className={"btn chico " + (nMeses === k ? "" : "suave")} disabled={!c} onClick={() => elegirMeses(k)}>{k === 12 ? "Año entero (12)" : k === 1 ? "1 mes" : k + " meses"}</button>)}
+          <select aria-label="Otra cantidad de meses" disabled={!c} value={nMeses && ![1, 2, 3, 6, 12].includes(nMeses) ? nMeses : ""} onChange={e => e.target.value && elegirMeses(+e.target.value)}><option value="">Otra cantidad…</option>{[4, 5, 7, 8, 9, 10, 11, 18, 24].map(k => <option key={k} value={k}>{k} meses</option>)}</select></div>
+          {info && info.meses.length > 0 && <p className="mute" style={{ margin: "6px 0 0" }}><b>{info.meses.length} {info.meses.length === 1 ? "mes" : "meses"}</b>: de {mesYear(info.meses[0])} a {mesYear(info.meses[info.meses.length - 1])} · {bs(info.monto)}{n(monto) !== info.monto ? <b style={{ color: "var(--warn)" }}> (cambiaste el monto: ahora es {bs(n(monto))})</b> : null}</p>}</Campo>
         <Campo l="Monto recibido (Bs)"><input type="number" min={0} step={0.01} value={monto} onChange={e => setMonto(e.target.value)} /></Campo>
         {atajos.length > 0 && <div className="fila">{atajos.map(([l, v, t]) => <button key={l} type="button" className="btn suave" title={t} onClick={() => setMonto(String(v))}>{l}</button>)}</div>}
         <Campo l="Medio de pago"><select value={medio} onChange={e => setMedio(e.target.value)}>{MEDIOS.map(m => <option key={m}>{m}</option>)}</select></Campo>
         <Campo l="Comprobante (obligatorio)"><input type="file" accept="image/*,.pdf" key={String(ok)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo>
         <LectorFoto tipo="comprobante" titulo="Leer el comprobante con IA" archivo={arch} onUsar={d => { if (d.monto) setMonto(String(d.monto)); if (d.referencia && !obs) setObs("Ref. " + d.referencia + (d.banco ? " · " + d.banco : "")); }} />
-        <Campo l="Mes que se paga"><select value={periodo} onChange={e => setPeriodo(e.target.value)}>{meses.map(m => <option key={m} value={m}>{mesYear(m)}</option>)}</select></Campo>
         <Campo l="Estado del cliente">{c?.estado_servicio === "SUSPENDIDO"
           ? <select value={reconectar} onChange={e => setReconectar(e.target.value)}><option value="si">Reconectar el servicio</option><option value="no">Mantener suspendido</option></select>
           : <select value="auto" disabled><option value="auto">{estadoFinal || "Pagado"}</option></select>}</Campo>

@@ -12,7 +12,7 @@ export default function Configuracion({ inicial }: { inicial?: string }) {
   useEffect(() => { if (inicial) setTab(inicial); }, [inicial]);
   return <div className="cfg">
     <h1 style={{ display: "block" }}>Configuración</h1>
-    <Tabs items={[["usuarios", "Usuarios"], ["roles", "Roles y permisos"], ["socios", "Socios y proyectos"], ["zonas", "Zonas"], ["papelera", "Papelera"]]} valor={tab} onChange={setTab} />
+    <Tabs items={[["usuarios", "Usuarios"], ["roles", "Roles y permisos"], ["socios", "Socios y proyectos"], ["zonas", "Proyectos y zonas"], ["papelera", "Papelera"]]} valor={tab} onChange={setTab} />
     {tab === "usuarios" && <ConfigUsuarios />}{tab === "roles" && <ConfigRoles />}{tab === "socios" && <ConfigSocios />}{tab === "zonas" && <Zonas />}{tab === "papelera" && <Papelera />}
   </div>;
 }

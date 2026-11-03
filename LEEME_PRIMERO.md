@@ -254,3 +254,14 @@ git push origin main
    - Puedes **subir el comprobante** (foto o PDF) de lo que invirtió; en la lista aparece "Ver comprobante".
 3. **Mapa:** se corrigió el bloqueo de OpenStreetMap ("Access blocked"): los mapas de calle vuelven a verse. Si algún día OpenStreetMap limita el uso, se puede cambiar de proveedor con la variable de Netlify `VITE_MAPA_CALLE_URL` (ver la guía del celular).
 4. `sql/3_verificar_instalacion.sql` ahora tiene 29 filas en OK.
+
+### Novedades de la 3.11 · Eliminar proyectos y zonas, propósito de la inversión y contraseña
+1. En Supabase → SQL Editor ejecuta **`sql/24_eliminar_y_propositos.sql`** (después del 23). No borra nada por sí solo.
+2. **Eliminar proyectos y zonas** (solo el administrador): Configuración → **Proyectos y zonas** → botón **Eliminar…** en cada zona y cada proyecto. Si está vacío se elimina con un toque. Si tiene datos, muestra qué se perdería (clientes, pagos, NAP…) y hay que **escribir su nombre** para confirmar. También hay **Eliminar para siempre…** dentro de la Papelera. "A la papelera" sigue existiendo para poder recuperarlo. Queda un registro de lo eliminado.
+3. **Inversores:** campo **"¿Para qué es esta inversión?"** al crearlo, visible en la lista y editable (botón "Editar nota").
+4. **Contraseña:** en el ingreso hay un ojito 👁 para ver lo que escribes y **"¿Olvidaste tu contraseña?"** (te llega un correo con un enlace para crear una nueva). Dentro de la app, el menú ☰ tiene **🔑 Cambiar contraseña**. El administrador puede enviar ese enlace a cualquier usuario desde Configuración → Usuarios.
+   **Para que el enlace del correo funcione:** en Supabase → Authentication → URL Configuration, pon como **Site URL** la dirección de tu sitio de Netlify y agrégala también en **Redirect URLs**.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 30 filas en OK.
+6. **Ubicación precisa en las hojas y en "📍 Usar mi ubicación":** el celular ya no se queda con la primera lectura; sigue midiendo hasta unos 25 segundos y se queda con la más exacta (se detiene sola cuando llega a unos 12 m). Se ve "±8 m · precisa" y, si la precisión es baja (más de 50 m), avisa que salgas a la calle y toques "Volver a medir". Lo que escribas a mano en el GPS nunca se pisa.
+7. **Pagos de varios meses:** en Clientes → Pagos hay **"¿Cuántos meses paga?"** (1, 2, 3, 6, **Año entero (12)** u otra cantidad) y **"Pagan desde el mes"**. Calcula solo el monto (salta los meses ya pagados), muestra de qué mes a qué mes cubre y deja una nota en observaciones. Se puede cambiar el monto a mano.
+

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "./supabase";
+import { supabase, entroPorRecuperacion } from "./supabase";
 import { Accion, MODULOS, fijarPermisos, matrizDe } from "./permisos";
 
 export type Perfil = { id: string; email: string; nombre: string; rol: string; rol_clave?: string | null; activo: boolean };
@@ -7,12 +7,13 @@ type Ctx = {
   cargando: boolean; sesion: any; perfil: Perfil | null; proyectos: any[]; zonas: any[]; recargar: () => Promise<void>;
   proyectoId: string; setProyectoId: (v: string) => void; zonaId: string; setZonaId: (v: string) => void; salir: () => Promise<void>;
   puede: (modulo: string, accion: Accion) => boolean; modulosVisibles: string[];
+  recuperando: boolean; terminarRecuperacion: () => void;
 };
 const C = createContext<Ctx>(null as any);
 export const useApp = () => useContext(C);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [sesion, setSesion] = useState<any>(null), [cargando, setCargando] = useState(true), [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [sesion, setSesion] = useState<any>(null), [recuperando, setRecuperando] = useState(entroPorRecuperacion), [cargando, setCargando] = useState(true), [perfil, setPerfil] = useState<Perfil | null>(null);
   const [proyectos, setProyectos] = useState<any[]>([]), [zonas, setZonas] = useState<any[]>([]), [permisos, setPermisos] = useState<any[]>([]);
   const [proyectoId, setProyectoId] = useState(localStorage.getItem("vx_proy") || ""), [zonaId, setZonaId] = useState(localStorage.getItem("vx_zona") || "");
 
@@ -30,7 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     recargar();
     // Se recarga fuera del evento para evitar bloqueos internos de Supabase.
-    const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(() => { recargar(); }, 0); });
+    const { data } = supabase.auth.onAuthStateChange((evento: string) => { if (evento === "PASSWORD_RECOVERY") setRecuperando(true); setTimeout(() => { recargar(); }, 0); });
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => { localStorage.setItem("vx_proy", proyectoId); }, [proyectoId]);
@@ -46,5 +47,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const puede = (modulo: string, accion: Accion) => perfil?.rol === "admin" || !!matriz[modulo]?.[accion];
   fijarPermisos(puede);
   const modulosVisibles = MODULOS.filter(([k]) => puede(k, "ver")).map(([k]) => k);
-  return <C.Provider value={{ cargando, sesion, perfil, proyectos, zonas, recargar, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede, modulosVisibles }}>{children}</C.Provider>;
+  return <C.Provider value={{ cargando, sesion, perfil, proyectos, zonas, recargar, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede, modulosVisibles, recuperando, terminarRecuperacion: () => setRecuperando(false) }}>{children}</C.Provider>;
 }

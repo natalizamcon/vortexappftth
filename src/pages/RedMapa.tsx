@@ -6,6 +6,7 @@ import { Aviso, Cargando, Vacio, useAlcance, useQuery } from "../lib/ui";
 import { todas } from "../lib/datos";
 import { MapaBase, LineaMapa, PuntoMapa } from "../lib/mapa";
 import { Geo, aKML, fmtLong, leerArchivoGeo, longitudMetros } from "../lib/geo";
+import { medirUbicacion } from "../lib/gps";
 
 const n = (x: any) => Number(x) || 0;
 const aDatos = (p: Promise<any[]>) => p.then(data => ({ data, error: null })).catch(e => ({ data: [] as any[], error: { message: e.message } }));
@@ -105,7 +106,7 @@ export function MapaRed({ ir }: { ir: (tab: string) => void }) {
     const { error } = await supabase.from("postes").insert({ proyecto_id: zona.proyecto_id, zona_id: zona.id, codigo: codPoste.trim(), lat: Math.round(marca.lat * 1e6) / 1e6, lng: Math.round(marca.lng * 1e6) / 1e6 });
     if (error) return setMsg(/duplicate key|unique/i.test(error.message) ? "Ya existe un poste con ese código en esta zona." : error.message); setOk(`Poste ${codPoste.trim()} creado.`); setCodPoste(""); setMarca(null); postes.recargar();
   };
-  const ubicarme = () => { setMsg(""); if (!navigator.geolocation) return setMsg("Tu navegador no puede dar la ubicación."); navigator.geolocation.getCurrentPosition(p => { const u = { lat: p.coords.latitude, lng: p.coords.longitude }; setUsuario(u); setIrA({ ...u, k: Date.now() }); }, () => setMsg("No se pudo obtener tu ubicación. Revisa que el navegador tenga permiso para usarla."), { enableHighAccuracy: true, timeout: 15000 }); };
+  const ubicarme = async () => { setMsg(""); if (!navigator.geolocation) return setMsg("Tu navegador no puede dar la ubicación."); const m = medirUbicacion({ maxMs: 12000, objetivo: 15, alMejorar: f => setUsuario(f) }), p = await m.primera; if (!p) { const f = await m.final; if (!f) return setMsg("No se pudo obtener tu ubicación. Revisa que el navegador tenga permiso para usarla y que la ubicación del celular esté en \"precisa\"."); } const f = await m.final; if (f) { setUsuario(f); setIrA({ lat: f.lat, lng: f.lng, k: Date.now() }); } };
   const exportar = () => {
     const kml = aKML("Red Vortex", [
       { nombre: "NAP", puntos: capas.nap ? N.map(x => ({ nombre: x.codigo, descripcion: `${x.tipo} · ${x.puertos} puertos`, lat: n(x.lat), lng: n(x.lng) })) : [] },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
@@ -28,6 +28,7 @@ export function Instalaciones({ accion }: { accion: Accion }) {
 
 function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zona: any; orden: any; archivoInicial?: File | null; onClose: () => void; onListo: () => void }) {
   const [f, setF] = useState<any>({ ...F0, nombre: orden && !orden.cliente_id ? orden.referencia || "" : "", tecnico: orden?.tecnico || "" }), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false), [otroPuerto, setOtroPuerto] = useState(false), [otroTec, setOtroTec] = useState(false), [formFile, setFormFile] = useState<File | null>(null), [avisos, setAvisos] = useState<string[]>([]);
+  const gpsAuto = useRef("");
   const planes = useQuery(() => supabase.from("planes").select("*").eq("zona_id", zona.id).eq("activo", true).order("precio"), [zona.id]);
   const naps = useQuery(() => supabase.from("naps").select("id, codigo, tipo").eq("zona_id", zona.id).order("codigo"), [zona.id]);
   const libres = useQuery(() => f.nap_id ? supabase.from("puertos").select("numero").eq("nap_id", f.nap_id).eq("estado", "LIBRE").order("numero") : Promise.resolve({ data: [], error: null }), [f.nap_id]);
@@ -36,7 +37,7 @@ function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zo
   const L: any[] = (libres.data as any[]) || [], pedido = f.puerto && L.some(p => String(p.numero) === String(f.puerto)) ? String(f.puerto) : "", puerto = pedido || (L[0] ? String(L[0].numero) : "");
   /** Llena todo el formulario con lo que la IA leyó de la hoja escrita a mano, y marca la ubicación del celular. */
   const aplicarHoja = ({ datos: d, ubicacion, archivo }: { datos: any; ubicacion: { lat: number; lng: number } | null; archivo: File }) => {
-    const antes = f, antesTec = otroTec, av: string[] = [], P: any[] = (planes.data as any[]) || [], N: any[] = (naps.data as any[]) || [], EQ: any[] = (equipos.data as any[]) || [], TE: any[] = (tecnicos.data as any[]) || [];
+    const antes = f, antesTec = otroTec, gpsHoja = ubicacion ? `${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}` : "", av: string[] = [], P: any[] = (planes.data as any[]) || [], N: any[] = (naps.data as any[]) || [], EQ: any[] = (equipos.data as any[]) || [], TE: any[] = (tecnicos.data as any[]) || [];
     const mbps = aNumero(d.mbps), plan = coincidir(d.plan, P, p => [p.nombre, `${p.nombre}${p.mbps}`]) || (mbps != null ? P.find(p => Number(p.mbps) === mbps) : undefined);
     if ((d.plan || mbps != null) && !plan) av.push(`No encontré el plan "${d.plan || mbps + " Mbps"}" entre los de esta zona: elígelo a mano.`);
     const nap = coincidir(d.nap, N, x => x.codigo); if (d.nap && !nap) av.push(`La NAP "${d.nap}" no existe en esta zona: elígela a mano.`);
@@ -44,8 +45,8 @@ function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zo
     const tec = d.tecnico ? coincidir(d.tecnico, TE, x => x.nombre) : undefined, pot = aNumero(d.potencia_onu_dbm), pn = aNumero(d.potencia_nap_dbm), vel = aNumero(d.velocidad_mbps), pi = aNumero(d.precio_instalacion), puertoLeido = aNumero(d.puerto);
     const mats = (d.materiales || []).filter((m: any) => m.material).map((m: any) => `${m.material}${m.cantidad != null ? " " + m.cantidad : ""}${m.unidad ? " " + m.unidad : ""}`).join("; ");
     const obs = [d.observaciones, mats && "Materiales usados: " + mats, vel != null && "Velocidad medida: " + vel + " Mbps", pn != null && "Potencia en la NAP: " + pn + " dBm"].filter(Boolean).join(" · ");
-    setOtroTec(!!d.tecnico && !tec);
-    setF((x: any) => ({ ...x, nombre: d.nombre || x.nombre, ci: d.ci || x.ci, telefono: d.telefono || x.telefono, ref_nombre: d.referencia_nombre || x.ref_nombre, ref_tel: d.referencia_telefono || x.ref_tel, direccion: d.direccion || x.direccion, gps: ubicacion ? `${ubicacion.lat}, ${ubicacion.lng}` : x.gps,
+    setOtroTec(!!d.tecnico && !tec); if (gpsHoja) gpsAuto.current = gpsHoja;
+    setF((x: any) => ({ ...x, nombre: d.nombre || x.nombre, ci: d.ci || x.ci, telefono: d.telefono || x.telefono, ref_nombre: d.referencia_nombre || x.ref_nombre, ref_tel: d.referencia_telefono || x.ref_tel, direccion: d.direccion || x.direccion, gps: gpsHoja || x.gps,
       plan_id: plan?.id || x.plan_id, nap_id: nap?.id || x.nap_id, puerto: nap ? (puertoLeido != null ? String(puertoLeido) : "") : x.puerto, equipo_id: eq?.id || "", equipo: eq ? eq.modelo || "" : e0?.modelo || x.equipo, serie: eq ? eq.serie : e0?.serie || x.serie, mac: eq ? eq.mac || "" : e0?.mac || x.mac,
       potencia: pot != null ? String(pot) : x.potencia, fecha: d.fecha || x.fecha, tecnico: tec ? tec.nombre : d.tecnico || x.tecnico, precio_instalacion: pi != null ? String(pi) : x.precio_instalacion, observaciones: obs || x.observaciones }));
     setFormFile(archivo); setAvisos(ubicacion ? av : [...av, "No se pudo marcar la ubicación: usa el botón 📍 Usar mi ubicación cuando estés en la casa del cliente."]);
@@ -74,7 +75,7 @@ function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zo
   };
 
   return <Drawer titulo={"Nueva instalación · zona " + zona.nombre} ancho={520} onClose={onClose}>{msg && <Aviso tipo="mal">{msg}</Aviso>}
-    <EscanerFormulario tipo="formulario_instalacion" titulo="Hoja de instalación llena a mano" archivoInicial={archivoInicial} onArchivo={setFormFile} onUbicacion={u => setF((x: any) => ({ ...x, gps: x.gps || `${u.lat}, ${u.lng}` }))} onUsar={aplicarHoja} />
+    <EscanerFormulario tipo="formulario_instalacion" titulo="Hoja de instalación llena a mano" archivoInicial={archivoInicial} onArchivo={setFormFile} onUbicacion={u => setF((x: any) => { const nuevo = `${u.lat.toFixed(6)}, ${u.lng.toFixed(6)}`; if (!x.gps || x.gps === gpsAuto.current) { gpsAuto.current = nuevo; return { ...x, gps: nuevo }; } return x; })} onUsar={aplicarHoja} />
     {avisos.map((a, i) => <Aviso key={i}>{a}</Aviso>)}
     <h3 style={{ marginTop: 0 }}>Cliente nuevo</h3>
     <LectorFoto tipo="carnet" titulo="Leer el carnet con foto" onUsar={d => setF((x: any) => ({ ...x, nombre: d.nombre || x.nombre, ci: d.ci ? String(d.ci) + (d.extension ? " " + d.extension : "") : x.ci }))} />

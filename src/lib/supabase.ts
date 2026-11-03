@@ -6,6 +6,9 @@ export const SUPABASE_URL: string = (URL_CFG.startsWith("PEGA") ? (import.meta a
 export const SUPABASE_ANON_KEY: string = (KEY_CFG.startsWith("PEGA") ? (import.meta as any).env?.VITE_SUPABASE_ANON_KEY : KEY_CFG) || "";
 export const configurado = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
 
+/** ¿Se entró desde el enlace del correo para cambiar la contraseña? Se mide antes de que Supabase limpie la dirección. */
+export const entroPorRecuperacion = typeof location !== "undefined" && /type=recovery/.test(location.hash + location.search);
+
 export const supabase = createClient(configurado ? SUPABASE_URL : "https://sin-configurar.supabase.co", configurado ? SUPABASE_ANON_KEY : "sin-configurar", {
   auth: { persistSession: true, autoRefreshToken: true },
 });

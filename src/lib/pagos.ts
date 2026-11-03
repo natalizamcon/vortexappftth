@@ -35,3 +35,16 @@ export function comportamiento(c?: { cargos_vencidos: number; a_tiempo: number; 
   if (ok >= 0.4) return { texto: "Irregular", clase: "warn", orden: 2 };
   return { texto: "Mal pagador", clase: "bad", orden: 1 };
 }
+
+/** Cuánto cuesta cubrir "k" meses desde un mes, saltando los que ya están pagados. Sirve para quien paga 3, 6 o los 12 meses de una vez. */
+export function montoParaMeses(a: { k: number; precio: number; desde: string; cargos: CargoRef[] }) {
+  const precio = num(a.precio), meses: string[] = []; let total = 0;
+  const min = a.cargos.length ? a.cargos.map(c => primeroDeMes(c.periodo)).sort()[0] : null;
+  let v = primeroDeMes(a.desde); if (min && v < min) v = min;
+  for (let i = 0; meses.length < a.k && i < 120; i++) {
+    const c = a.cargos.find(x => primeroDeMes(x.periodo) === v), saldo = r2((c ? num(c.monto) : precio) - (c ? num(c.pagado) : 0));
+    if (saldo > 0.004) { meses.push(v); total += saldo; }
+    v = mesSig(v);
+  }
+  return { monto: r2(total), meses };
+}

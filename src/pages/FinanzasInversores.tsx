@@ -15,7 +15,7 @@ export function Inversores() {
   const { zonaId, proyectoId, zonas } = useApp(), al = useAlcance();
   const inv = useQuery(() => al(supabase.from("inversores").select("*, zonas(nombre)").order("nombre")), [proyectoId, zonaId]), pag = useQuery(() => al(supabase.from("pagos_inversores").select("*").order("fecha", { ascending: false }), false), [proyectoId, inv.data]);
   const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [comp, setComp] = useState<File | null>(null), [clave, setClave] = useState(0);
-  const [f, setF] = useState({ nombre: "", moneda: "BOB" as Moneda, cap: "", tc: "", plazo: "12", fecha: hoy(), modo: "porcentaje" as ModoInteres, valor: "", base: "mensual" as BaseInteres });
+  const [f, setF] = useState({ nombre: "", moneda: "BOB" as Moneda, cap: "", tc: "", plazo: "12", fecha: hoy(), modo: "porcentaje" as ModoInteres, valor: "", base: "mensual" as BaseInteres, proposito: "" });
   const [g, setG] = useState({ inversor_id: "", fecha: hoy(), monto: "", nota: "" }), [arch, setArch] = useState<File | null>(null);
   const I: any[] = (inv.data as any[]) || [], P: any[] = (pag.data as any[]) || [], pagado = (id: string) => P.filter(p => p.inversor_id === id).reduce((s, p) => s + num(p.monto), 0);
   const calc = calcularInversion({ moneda: f.moneda, cap: num(f.cap), tc: num(f.tc), plazo: num(f.plazo), modo: f.modo, valor: num(f.valor), base: f.base });
@@ -29,13 +29,14 @@ export function Inversores() {
     try {
       const ruta = comp ? await subirArchivo("comprobantes", z.proyecto_id, comp) : null;
       const { error } = await supabase.from("inversores").insert({ proyecto_id: z.proyecto_id, zona_id: z.id, nombre: f.nombre.trim(), monto: calc.montoBs, interes: calc.interes, periodo_interes: calc.periodo, plazo_meses: Math.round(num(f.plazo)), fecha_inicio: f.fecha,
-        moneda: f.moneda, monto_original: num(f.cap), tipo_cambio: f.moneda === "USD" ? num(f.tc) : null, interes_modo: f.modo, interes_monto: f.modo === "monto" ? num(f.valor) : null, interes_base: f.modo === "monto" ? f.base : null, comprobante_path: ruta });
+        proposito: f.proposito.trim() || null, moneda: f.moneda, monto_original: num(f.cap), tipo_cambio: f.moneda === "USD" ? num(f.tc) : null, interes_modo: f.modo, interes_monto: f.modo === "monto" ? num(f.valor) : null, interes_base: f.modo === "monto" ? f.base : null, comprobante_path: ruta });
       if (error) throw new Error(error.message);
-      setOk(`Inversor "${f.nombre.trim()}" agregado${ruta ? " con su comprobante" : ""}.`); setF({ ...f, nombre: "", cap: "", valor: "" }); setComp(null); setClave(k => k + 1); inv.recargar();
+      setOk(`Inversor "${f.nombre.trim()}" agregado${ruta ? " con su comprobante" : ""}.`); setF({ ...f, nombre: "", cap: "", valor: "", proposito: "" }); setComp(null); setClave(k => k + 1); inv.recargar();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
   const pagar = async () => { setMsg(""); setOk(""); const inversor = I.find(x => x.id === g.inversor_id); if (!inversor) return setMsg("Elige al inversor."); try { const ruta = arch ? await subirArchivo("comprobantes", inversor.proyecto_id, arch) : null; const { error } = await supabase.from("pagos_inversores").insert({ inversor_id: g.inversor_id, proyecto_id: inversor.proyecto_id, fecha: g.fecha, monto: num(g.monto), nota: g.nota, comprobante_path: ruta }); if (error) throw new Error(error.message); setG({ ...g, monto: "", nota: "" }); setArch(null); pag.recargar(); } catch (e: any) { setMsg(e.message); } };
+  const editarNota = async (x: any) => { const t = prompt("¿Para qué es esta inversión?", x.proposito || ""); if (t === null) return; const { error } = await supabase.from("inversores").update({ proposito: t.trim() || null }).eq("id", x.id); if (error) setMsg(error.message); else inv.recargar(); };
   const ver = async (ruta: string) => { const u = await urlArchivo("comprobantes", ruta); if (u) window.open(u, "_blank"); else setMsg("No se pudo abrir el archivo."); };
   const debe = I.reduce((s, x) => s + totalBs(x) - pagado(x.id), 0);
   const modoBtn = (m: ModoInteres, t: string) => <button type="button" className={"btn chico " + (f.modo === m ? "" : "suave")} onClick={() => cambiarModo(m)}>{t}</button>;
@@ -44,7 +45,7 @@ export function Inversores() {
     <div className="grid gk" style={{ marginBottom: 14 }}><div className="card kpi"><span>Capital recibido</span><b>{bs(I.reduce((s, x) => s + num(x.monto), 0))}</b></div><div className="card kpi"><span>Intereses a devolver</span><b>{bs(I.reduce((s, x) => s + totalInt(x), 0))}</b></div><div className="card kpi"><span>Pagado a inversores</span><b>{bs(P.reduce((s, x) => s + num(x.monto), 0))}</b></div><div className="card kpi"><span>Lo que debo ahora</span><b style={{ color: debe > 0 ? "var(--bad)" : "var(--ok)" }}>{bs(debe)}</b></div></div>
     <div className="card tw"><h2>Inversores</h2>{I.length ? <table><thead><tr><th>Inversor</th><th>Zona</th><th>Capital</th><th>Interés</th><th>Plazo</th><th>Total a devolver</th><th>Cuota mensual</th><th>Pagado</th><th>Saldo</th><th>Comprobante</th><th /></tr></thead><tbody>{I.map(x => {
       const r = resumenGuardado(x), t = totalBs(x), usd = x.moneda === "USD";
-      return <tr key={x.id}><td>{x.nombre}<br /><small className="mute">desde {String(x.fecha_inicio).slice(0, 10)}</small></td><td>{x.zonas?.nombre}</td>
+      return <tr key={x.id}><td>{x.nombre}<br /><small className="mute">desde {String(x.fecha_inicio).slice(0, 10)}</small>{x.proposito ? <><br /><small>🎯 {x.proposito}</small></> : null}<br /><button className="btn suave chico" style={{ marginTop: 4 }} onClick={() => editarNota(x)}>{x.proposito ? "Editar nota" : "+ Para qué es"}</button></td><td>{x.zonas?.nombre}</td>
         <td>{usd ? <><b>{fmt(r.cap, "USD")}</b><br /><small className="mute">T/C {r.factor} → {bs(x.monto)}</small></> : bs(x.monto)}</td>
         <td><b>{pct(r.pctMes)}</b> por mes<br /><small className="mute">{pct(r.pctAnio)} por año{x.interes_modo === "monto" && x.interes_monto ? ` · pactado ${fmt(num(x.interes_monto), usd ? "USD" : "BOB")} ${BASE_TXT[x.interes_base || "total"]}` : ""}</small></td>
         <td>{x.plazo_meses} meses</td><td>{bs(t)}{usd && <><br /><small className="mute">{fmt(r.total, "USD")}</small></>}</td><td>{bs(t / (num(x.plazo_meses) || 1))}</td><td>{bs(pagado(x.id))}</td><td><b>{bs(Math.max(0, t - pagado(x.id)))}</b></td>
@@ -59,6 +60,7 @@ export function Inversores() {
         {f.moneda === "USD" && <Campo l="Tipo de cambio que se usó (Bs por 1 USD)"><input type="number" min={0} step="0.01" placeholder="por ejemplo 6.96" value={f.tc} onChange={e => set("tc", e.target.value)} /></Campo>}
         <Campo l="Plazo (meses)"><input type="number" min={1} value={f.plazo} onChange={e => set("plazo", e.target.value)} /></Campo>
         <Campo l="Fecha en que invirtió"><input type="date" value={f.fecha} onChange={e => set("fecha", e.target.value)} /></Campo></div>
+      <div className="form" style={{ gridTemplateColumns: "1fr" }}><Campo l="¿Para qué es esta inversión? (opcional)"><input placeholder="Por ejemplo: compra de ONU y cable para la zona A2" value={f.proposito} onChange={e => set("proposito", e.target.value)} /></Campo></div>
       <h3 style={{ margin: "10px 0 4px" }}>Interés que le vas a pagar</h3>
       <div className="fila" style={{ marginBottom: 6 }}>{modoBtn("porcentaje", "Lo pongo en porcentaje (%)")}{modoBtn("monto", "Lo pongo en monto")}</div>
       <div className="form"><Campo l={f.modo === "porcentaje" ? "Porcentaje (%)" : `Monto de interés (${f.moneda === "USD" ? "USD" : "Bs"})`}><input type="number" min={0} step="0.01" value={f.valor} onChange={e => set("valor", e.target.value)} /></Campo>

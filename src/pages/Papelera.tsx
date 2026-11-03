@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Cargando, Vacio, bs, useQuery } from "../lib/ui";
 import { restaurarDePapelera } from "../lib/papelera";
+import { EliminarDefinitivo } from "../lib/eliminar";
 
 const TIPOS: Record<string, [string, (d: any) => string]> = {
   proyectos: ["Proyecto", d => d.nombre],
@@ -32,7 +33,7 @@ const TIPOS: Record<string, [string, (d: any) => string]> = {
 export default function Papelera() {
   const { recargar } = useApp();
   const q = useQuery(() => supabase.rpc("listar_papelera"), []);
-  const [filtro, setFiltro] = useState(""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState("");
+  const [filtro, setFiltro] = useState(""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(""), [elim, setElim] = useState<{ tabla: "zonas" | "proyectos"; id: string; nombre: string } | null>(null);
   const filas: any[] = ((q.data as any[]) || []).filter(x => !filtro || x.tabla === filtro).sort((a, b) => String(b.eliminado_en).localeCompare(String(a.eliminado_en)));
 
   const restaurar = async (x: any) => {
@@ -43,7 +44,7 @@ export default function Papelera() {
 
   return <>
     <h1>Papelera</h1>
-    <Aviso>Aquí está todo lo que mandaste a la papelera. <b>Nada se elimina de verdad</b>: puedes restaurarlo cuando quieras. Solo el administrador ve esta pantalla.</Aviso>
+    <Aviso>Aquí está todo lo que mandaste a la papelera: puedes restaurarlo cuando quieras. Las <b>zonas y los proyectos</b> también se pueden <b>eliminar para siempre</b> desde aquí. Solo el administrador ve esta pantalla.</Aviso>
     {msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="fila" style={{ margin: "10px 0" }}>
       <select value={filtro} onChange={e => setFiltro(e.target.value)}><option value="">Todo</option>{Object.entries(TIPOS).map(([k, [n]]) => <option key={k} value={k}>{n}</option>)}</select>
@@ -56,6 +57,7 @@ export default function Papelera() {
         <td>{x.tabla === "proyectos" ? "—" : [x.espacio, x.zona].filter(Boolean).join(" › ") || "—"}</td>
         <td>{String(x.eliminado_en).slice(0, 10)}{x.eliminado_por && <><br /><span className="mute">{x.eliminado_por}</span></>}</td>
         <td>{x.motivo || "—"}</td>
-        <td><button className="btn suave chico" disabled={ocup === x.id} onClick={() => restaurar(x)}>{ocup === x.id ? "Restaurando…" : "Restaurar"}</button></td></tr>; })}</tbody></table> : <Vacio>La papelera está vacía.</Vacio>}</div>
+        <td><div className="fila"><button className="btn suave chico" disabled={ocup === x.id} onClick={() => restaurar(x)}>{ocup === x.id ? "Restaurando…" : "Restaurar"}</button>{(x.tabla === "zonas" || x.tabla === "proyectos") && <button className="btn suave chico" onClick={() => setElim({ tabla: x.tabla, id: x.id, nombre: (x.datos || {}).nombre || "" })}>Eliminar para siempre…</button>}</div></td></tr>; })}</tbody></table> : <Vacio>La papelera está vacía.</Vacio>}</div>
+    {elim && <EliminarDefinitivo tabla={elim.tabla} id={elim.id} nombre={elim.nombre} onClose={() => setElim(null)} onListo={async () => { const n = elim.nombre; setElim(null); await recargar(); q.recargar(); setOk(`"${n}" se eliminó para siempre.`); }} />}
   </>;
 }

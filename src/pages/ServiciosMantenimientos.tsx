@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
+import { EscanerFormulario } from "../lib/EscanerFormulario";
+import { aNumero, coincidir } from "../lib/coincidir";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Estado, Kpi, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
@@ -31,7 +33,7 @@ export function Mantenimientos({ accion }: { accion: Accion }) {
     <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Mantenimientos" v={hechos.length} s="Concluidos" /><Kpi t="Costo total" v={bs(costo)} /><Kpi t="Costo promedio" v={bs(hechos.length ? costo / hechos.length : 0)} /></div>
     <div className="grid g2"><div className="card"><h2>NAP con más fallas</h2>{Object.keys(porNap).length ? <BarrasH filas={Object.entries(porNap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([nombre, valor]) => ({ nombre, valor, extra: String(valor) }))} /> : <p className="mute">Ninguna NAP tiene correctivos registrados.</p>}</div>
       <div className="card"><h2>Costo por tipo de mantenimiento</h2>{Object.keys(porTipo).length ? <BarrasH color="var(--acc)" filas={Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([nombre, valor]) => ({ nombre, valor }))} /> : <p className="mute">Aún no hay mantenimientos concluidos.</p>}</div></div>
-    <div className="card tw">{hechos.length ? <table><thead><tr><th>Fecha</th><th>NAP</th><th>Tipo</th><th>Problema</th><th>Costo</th></tr></thead><tbody>{hechos.map(m => <tr key={m.id}><td>{fcorta(m.fecha_cierre || m.fecha_programada)}</td><td>{m.referencia || m.objeto}</td><td>{m.tipo}</td><td>{m.problema}</td><td style={{ color: "var(--ok)" }}>{bs(m.costo)}</td></tr>)}</tbody></table> : <Vacio>Aún no hay mantenimientos concluidos.</Vacio>}</div>
+    <div className="card tw">{hechos.length ? <table><thead><tr><th>Fecha</th><th>NAP</th><th>Tipo</th><th>Problema</th><th>Costo</th><th>Ubicación</th><th>Formulario</th></tr></thead><tbody>{hechos.map(m => <tr key={m.id}><td>{fcorta(m.fecha_cierre || m.fecha_programada)}</td><td>{m.referencia || m.objeto}</td><td>{m.tipo}</td><td>{m.problema}</td><td style={{ color: "var(--ok)" }}>{bs(m.costo)}</td><td>{m.lat != null && m.lng != null ? <a href={`https://www.google.com/maps?q=${m.lat},${m.lng}`} target="_blank" rel="noreferrer">Ver en el mapa</a> : "—"}</td><td>{m.formulario_path ? <button className="btn suave chico" onClick={async () => { const u = await urlArchivo("fotos", m.formulario_path); if (u) window.open(u, "_blank"); }}>Ver formulario</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay mantenimientos concluidos.</Vacio>}</div>
     {panel && zona && <FormMantenimiento modo={panel} zona={zona} orden={orden} onClose={() => setPanel("")} onListo={() => { setPanel(""); q.recargar(); }} />}
     {panel && !zona && <Drawer titulo="Mantenimiento" onClose={() => setPanel("")}><Aviso>Elige una zona arriba para registrar o programar un mantenimiento.</Aviso></Drawer>}
     {seg && <Seguimiento m={seg} onClose={() => { setSeg(null); q.recargar(); }} />}
@@ -43,11 +45,24 @@ function FormMantenimiento({ modo, zona, orden, onClose, onListo }: { modo: "reg
   const tecnicos = useQuery(() => supabase.from("instaladores").select("nombre").eq("zona_id", zona.id).eq("activo", true).order("nombre"), [zona.id]);
   const [f, setF] = useState({ objeto: "NAP", referencia: orden?.referencia || "", tipo: "Correctivo", problema: "", solucion: "", fecha: hoy(), tecnico: orden?.tecnico || "", costo: "" }), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false);
   const reg = modo === "registrar";
+  const [hoja, setHoja] = useState<{ archivo: File; ubic: { lat: number; lng: number } | null } | null>(null), [avisos, setAvisos] = useState<string[]>([]);
+  /** Llena el mantenimiento con lo que la IA leyó de la hoja escrita a mano y guarda la ubicación del celular. */
+  const aplicarHoja = ({ datos: d, ubicacion }: { datos: any; ubicacion: { lat: number; lng: number } | null; archivo: File }) => {
+    const antes = f, av: string[] = [], objeto = coincidir(d.objeto, OBJETOS, o => o) || (d.objeto ? "Otro" : ""), NP: any[] = (naps.data as any[]) || [], TE: any[] = (tecnicos.data as any[]) || [];
+    const nap = objeto === "NAP" ? coincidir(d.referencia, NP, x => x.codigo) : undefined; if (objeto === "NAP" && d.referencia && !nap) av.push(`La NAP "${d.referencia}" no existe en esta zona: elígela a mano.`);
+    const tipo = coincidir(d.tipo, TIPOS, t => t), tec = d.tecnico ? coincidir(d.tecnico, TE, x => x.nombre) : undefined; if (d.tecnico && TE.length && !tec) av.push(`El técnico "${d.tecnico}" no está en la lista de instaladores: elígelo a mano.`);
+    const mats = (d.materiales || []).filter((m: any) => m.material).map((m: any) => `${m.material}${m.cantidad != null ? " " + m.cantidad : ""}${m.unidad ? " " + m.unidad : ""}`).join("; "), a = aNumero(d.potencia_antes_dbm), b = aNumero(d.potencia_despues_dbm), costo = aNumero(d.costo);
+    const sol = [d.solucion, mats && "Materiales: " + mats, a != null && "Potencia antes: " + a + " dBm", b != null && "Potencia después: " + b + " dBm"].filter(Boolean).join(" · ");
+    setF(x => ({ ...x, objeto: objeto || x.objeto, referencia: objeto === "NAP" ? nap?.codigo || "" : d.referencia || x.referencia, tipo: tipo || x.tipo, problema: d.problema || x.problema, solucion: sol || x.solucion, fecha: d.fecha && d.fecha <= hoy() ? d.fecha : x.fecha, tecnico: tec ? tec.nombre : TE.length ? x.tecnico : d.tecnico || x.tecnico, costo: costo != null ? String(costo) : x.costo }));
+    setAvisos(ubicacion ? av : [...av, "No se pudo marcar la ubicación del celular."]);
+    return () => { setF(antes); setAvisos([]); };
+  };
   const guardar = async () => {
     setMsg(""); if (!f.problema.trim()) return setMsg("Describe el problema o el trabajo."); if (reg && !f.solucion.trim()) return setMsg("Escribe la solución aplicada.");
     setOcup(true);
     try {
-      const fila: any = { proyecto_id: zona.proyecto_id, zona_id: zona.id, objeto: f.objeto, referencia: f.referencia || null, tipo: f.tipo, problema: f.problema.trim(), fecha_programada: f.fecha, tecnico: f.tecnico || null };
+      let rutaHoja: string | null = null; if (hoja) { try { rutaHoja = await subirArchivo("fotos", zona.proyecto_id, hoja.archivo); } catch { /* el mantenimiento igual se guarda */ } }
+      const fila: any = { proyecto_id: zona.proyecto_id, zona_id: zona.id, formulario_path: rutaHoja, lat: hoja?.ubic?.lat ?? null, lng: hoja?.ubic?.lng ?? null, objeto: f.objeto, referencia: f.referencia || null, tipo: f.tipo, problema: f.problema.trim(), fecha_programada: f.fecha, tecnico: f.tecnico || null };
       if (reg) Object.assign(fila, { estado: "COMPLETADA", solucion: f.solucion.trim(), costo: n(f.costo), fecha_cierre: f.fecha });
       const { data, error } = await supabase.from("mantenimientos").insert(fila).select("id").single(); if (error) throw new Error(error.message);
       if (reg && n(f.costo) > 0) await supabase.from("fin_movimientos").insert({ proyecto_id: zona.proyecto_id, zona_id: zona.id, tipo: "GASTO_OPERATIVO", categoria: "Mantenimiento", monto: n(f.costo), descripcion: (f.referencia || f.objeto) + ": " + f.problema, fecha: f.fecha });
@@ -58,6 +73,7 @@ function FormMantenimiento({ modo, zona, orden, onClose, onListo }: { modo: "reg
   };
   return <Drawer titulo={(reg ? "Registrar mantenimiento" : "Programar mantenimiento") + " · zona " + zona.nombre} ancho={500} onClose={onClose}>{msg && <Aviso tipo="mal">{msg}</Aviso>}
     <p className="mute" style={{ marginTop: 0 }}>{reg ? "Para un trabajo que ya se hizo: queda concluido y su costo pasa a gastos operativos." : "Queda programado para darle seguimiento día por día."}</p>
+    {reg && <><EscanerFormulario tipo="formulario_mantenimiento" titulo="Hoja de mantenimiento llena a mano" onArchivo={x => setHoja(x ? { archivo: x, ubic: null } : null)} onUbicacion={u => setHoja(h => (h ? { ...h, ubic: u } : h))} onUsar={aplicarHoja} />{avisos.map((a, i) => <Aviso key={i}>{a}</Aviso>)}</>}
     <div className="form" style={{ gridTemplateColumns: "1fr" }}>
       <Campo l="¿Qué se atiende?"><select value={f.objeto} onChange={e => setF({ ...f, objeto: e.target.value, referencia: "" })}>{OBJETOS.map(o => <option key={o}>{o}</option>)}</select></Campo>
       <Campo l="Cuál">{f.objeto === "NAP" ? <select value={f.referencia} onChange={e => setF({ ...f, referencia: e.target.value })}><option value="">Elige…</option>{((naps.data as any[]) || []).map(x => <option key={x.codigo}>{x.codigo}</option>)}</select> : <input value={f.referencia} onChange={e => setF({ ...f, referencia: e.target.value })} />}</Campo>

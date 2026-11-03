@@ -125,3 +125,45 @@ a.btn{text-decoration:none}
 .campana b{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:99px;padding:0 6px;font-size:11px}
 .menu-usuario{position:relative}.menu-usuario summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:5px 10px;background:var(--panel)}.menu-usuario summary::-webkit-details-marker{display:none}
 .menu-usuario .desplegable{position:absolute;right:0;top:100%;z-index:40;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #10142c33;padding:10px;min-width:220px}
+
+/* ---------- Celular: que se vea y se use bien en pantallas angostas ---------- */
+.mapa-layout{grid-template-columns:minmax(0,3fr) minmax(250px,1fr);align-items:start}
+.historial-layout{grid-template-columns:minmax(300px,4fr) minmax(320px,6fr);align-items:start}
+.roles-layout{grid-template-columns:minmax(200px,1fr) minmax(0,4fr);align-items:start}
+select,input,textarea{max-width:100%}.campo{min-width:0}
+@media(max-width:800px){
+  .mapa-layout,.historial-layout,.roles-layout{grid-template-columns:minmax(0,1fr)}
+  .tabs,.subtabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .tabs button,.subtabs button{flex:0 0 auto;white-space:nowrap}
+  .btn.chico{min-height:36px;padding:6px 12px}
+  .btn{min-height:40px}
+  input[type=checkbox],input[type=radio]{width:20px;height:20px}
+  .drawer{padding:12px 12px 80px}
+}
+@media(max-width:800px){
+  .topnav{padding:6px 10px}.topnav .fila{flex-wrap:wrap;gap:4px}.topnav img{height:32px}
+  .nav{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}
+  .nav a{padding:8px 12px}
+  .barra{padding:8px 10px}.barra select{max-width:48%}.buscador{flex:1 1 100%;max-width:none;margin-left:0;order:5}
+  .menu-usuario .desplegable{right:auto;left:0}
+}
+
+/* ---------- Menú lateral desplegable (☰) y barra superior delgada ---------- */
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 12px;background:linear-gradient(90deg,#e6d8fb,#d3f4f6);border-bottom:1px solid #cdbff0;position:sticky;top:0;z-index:30}
+.hamb{width:40px;height:40px;border:1px solid #cdbff0;border-radius:10px;background:#fff;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;flex:0 0 auto}.hamb span{display:block;height:3px;background:var(--ink);border-radius:2px}
+.logo-mini{height:30px}.seccion{font-size:15px}
+.controles{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;min-width:0}
+.controles .buscador{flex:1 1 220px;max-width:420px;margin-left:0}
+.lateral{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:86vw;background:#fff;box-shadow:6px 0 24px #10142c40;transform:translateX(-105%);visibility:hidden;transition:transform .2s,visibility .2s;z-index:70;display:flex;flex-direction:column;padding:12px;overflow-y:auto}
+.lateral.abierto{transform:none;visibility:visible}
+.lateral-fondo{position:fixed;inset:0;background:#10142c66;z-index:65;opacity:0;pointer-events:none;transition:opacity .2s}.lateral-fondo.abierto{opacity:1;pointer-events:auto}
+.lateral nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.lateral nav a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;color:var(--ink);text-decoration:none;font-weight:500;font-size:14px}.lateral nav a:hover{background:var(--lilb)}.lateral nav a.on{background:var(--acc);font-weight:700}.lateral .ico{width:24px;text-align:center}
+.lateral-pie{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.acciones{display:flex;gap:8px;align-items:center;margin-left:auto;flex:0 0 auto}
+@media(max-width:800px){.topbar{gap:6px}.acciones{order:2}.controles{order:3;flex:1 1 100%;justify-content:flex-start}.controles select{max-width:48%}.controles .buscador{flex:1 1 100%;max-width:none;order:5}.menu-usuario .desplegable{right:0;left:auto}.logo-mini{display:none}.seccion{font-size:14px;flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.menu-usuario summary{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* En el celular la barra de arriba queda con una sola fila: ☰, la sección y la campana. Proyecto, zona, búsqueda y usuario están en el menú lateral. */
+.lateral-filtros{display:none;flex-direction:column;gap:8px;margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.lateral-filtros select{width:100%}.lateral-filtros .buscador{max-width:none;flex:none;margin-left:0;order:0}
+@media(max-width:800px){.lateral-filtros{display:flex}.topbar .controles,.topbar .menu-usuario{display:none}.acciones{margin-left:auto;order:0}.topbar{flex-wrap:nowrap}}

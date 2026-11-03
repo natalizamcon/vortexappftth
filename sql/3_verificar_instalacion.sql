@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 26 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 28 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -152,4 +152,20 @@ select n, comprobacion, resultado, estado from (
   select 26, 'Mapa GPS: trazados (archivo 20)',
          (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'trazados_gps')::text,
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'trazados_gps') = 1 then 'OK' else 'FALTA: ejecuta 20_mapa_gps.sql' end
+  union all
+  select 27, 'Facturas, mapas guardados y formularios escaneados (archivo 21)',
+         ((select count(*) from information_schema.columns where table_schema = 'public' and ((table_name = 'movimientos' and column_name = 'factura_path') or (table_name = 'bajas' and column_name in ('lat','formulario_path')) or (table_name = 'mantenimientos' and column_name in ('lat','formulario_path')) or (table_name = 'instalaciones' and column_name = 'formulario_path')))
+          + (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'mapas_proyecto'))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and ((table_name = 'movimientos' and column_name = 'factura_path') or (table_name = 'bajas' and column_name in ('lat','formulario_path')) or (table_name = 'mantenimientos' and column_name in ('lat','formulario_path')) or (table_name = 'instalaciones' and column_name = 'formulario_path'))) = 6
+               and (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'mapas_proyecto') = 1
+              then 'OK' else 'FALTA: ejecuta 21_facturas_mapas_formularios.sql' end
+  union all
+  select 28, 'Banco: movimientos, reconocimiento de pagos y listas (archivo 22)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('banco_movimientos','banco_alias'))
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_habilitar','v_cortar'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_movimiento_banco','conciliar_banco','aplicar_banco','ignorar_banco','registrar_pago_sistema')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('banco_movimientos','banco_alias')) = 2
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_habilitar','v_cortar')) = 2
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_movimiento_banco','conciliar_banco','aplicar_banco','ignorar_banco','registrar_pago_sistema')) = 5
+              then 'OK' else 'FALTA: ejecuta 22_banco.sql' end
 ) r order by n;

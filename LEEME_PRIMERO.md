@@ -210,3 +210,38 @@ git push origin main
 3. **Lectura de fotos con IA** (etiqueta del equipo, potencia, carnet y comprobante de pago). Para activarla sigue `GUIA_FOTOS_IA.md` (3 variables en Netlify).
 4. En Nueva instalación también hay un botón **📍 Usar mi ubicación** para llenar el GPS del cliente.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 26 filas en OK.
+
+### Novedades de la 3.6 · Facturas, mapas de maps.me y formularios escaneados
+1. En Supabase → SQL Editor ejecuta `sql/21_facturas_mapas_formularios.sql` (después del 20; no borra datos).
+2. **Inventario:** al ingresar material puedes adjuntar la factura; se ve en "Movimientos recientes" y en el botón **Facturas** de cada material (donde también puedes adjuntar una que falte). Las compras de la empresa pasan su factura al inventario.
+3. **Red → Mapa → Mapas del proyecto:** sube el archivo de maps.me (KMZ o KML) tal cual; queda guardado con sus colores y lo abres cuando quieras (Abrir, Descargar, Convertir en postes y trazados, Quitar).
+4. **Escanear formularios:** en Nueva instalación, Bajas y Registrar mantenimiento hay un botón para fotografiar la hoja llena a mano; la app llena todo y marca la ubicación. En Formularios hay dos hojas nuevas (Orden de baja y Orden de mantenimiento) y la de instalación trae referencia y precio de instalación. Requiere activar la IA (`GUIA_FOTOS_IA.md`).
+5. `sql/3_verificar_instalacion.sql` ahora tiene 27 filas en OK.
+
+### También en la 3.6 · Mejoras para usar el sistema en el celular
+- Menú superior que se desliza de lado en una sola fila, y pestañas que también se deslizan (antes ocupaban hasta 3 filas).
+- Mapa, Historial de la red y Roles y permisos ahora apilan sus paneles en pantallas angostas (antes se veían apretados).
+- Botones y casillas más grandes para tocarlos con el dedo; se corrigió el desborde en Gastos adicionales.
+
+### Novedades de la 3.7 · Menú lateral y escaneo de hojas en un solo toque
+1. **Menú lateral desplegable (☰):** la barra de arriba ahora es delgada (menú de tres rayitas a la izquierda, sección actual, filtros, búsqueda, campana y usuario). El menú se abre desde la izquierda y se cierra al elegir una opción, al tocar fuera o con Esc.
+2. **Escanear hoja de instalación:** botón **📷 Escanear hoja de instalación** (Panel operativo e Instalaciones). Un solo toque: se abre la cámara y, al tomar la foto, se guarda la foto, se marca la ubicación, se lee la hoja y se llena el formulario. Con **Deshacer**. Si la IA no está activada, la foto y la ubicación se guardan igual.
+3. La baja y el mantenimiento escanean igual, y la ficha del cliente tiene el botón **Ver la hoja firmada**.
+4. Requiere haber corrido `sql/21_facturas_mapas_formularios.sql` (si aún no lo hiciste, córrelo antes de publicar).
+
+### Novedades de la 3.8 · Versión para celular
+1. **Barra de arriba mínima en el celular:** solo ☰, la sección y la campana. Proyecto, zona, búsqueda y usuario están dentro del menú lateral. En computadora la barra sigue con todo, pero delgada.
+2. **App instalable:** Vortex se puede instalar en la pantalla de inicio del celular (ver `GUIA_CELULAR.md`).
+3. **Mapa:** el botón **Subir mapa** está arriba del mapa (visible en el celular). El selector de archivos ya no filtra por tipo, para que Android deje elegir los archivos KMZ y GPX de maps.me. Los mapas guardados se ven apenas se abre el mapa.
+4. **Letrero "Powered by Netlify":** se apaga desde Netlify (Project configuration → General → Powered by Netlify badge); pasos en `GUIA_CELULAR.md`.
+
+### Novedades de la 3.9 · Banco: pagos automáticos y listas de habilitar / cortar
+1. En Supabase → SQL Editor ejecuta **`sql/21_facturas_mapas_formularios.sql`** (si aún no) y luego **`sql/22_banco.sql`**. No borran datos.
+2. **Clientes → Banco y listas:**
+   - **Lista del día:** quiénes pagaron y hay que **habilitar**, quiénes no han pagado y hay que **cortar**, y quiénes pagaron hoy. Botón **🔄 Actualizar lista ahora** (y se actualiza sola cada minuto). Copiar, CSV e imprimir.
+   - **Movimientos del banco:** lo que llegó del banco, con reconocimiento automático por código (C-0001), carnet o nombres ya confirmados. Lo dudoso queda por revisar con botones de un toque.
+   - **Importar extracto:** sube el CSV del banco o pega las filas desde Excel. Funciona hoy con cualquier banco.
+   - **Conexión automática:** la dirección para que el banco o la pasarela avisen cada pago al instante. Ver `GUIA_BANCO.md`.
+3. Se agregó `netlify/functions/banco-webhook.mjs` (hay que subir la carpeta `netlify`).
+4. El menú lateral muestra "Vortex · versión 3.9" al pie (y la pantalla de ingreso también): sirve para comprobar que se publicó esta versión.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 28 filas en OK.

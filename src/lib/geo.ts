@@ -1,5 +1,5 @@
 /** Lectura de archivos GPS (KML, KMZ, GPX), cálculo de distancias y exportación a KML. No usa librerías externas. */
-export type Geo = { tipo: "punto" | "linea" | "poligono"; nombre: string; descripcion?: string; coords: [number, number][] }; // coords = [latitud, longitud]
+export type Geo = { tipo: "punto" | "linea" | "poligono"; nombre: string; descripcion?: string; coords: [number, number][]; color?: string }; // coords = [latitud, longitud]
 
 const valida = (lat: number, lng: number) => isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
 const limpiarHtml = (s: string) => s.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
@@ -10,14 +10,30 @@ const xml = (texto: string) => { const d = new DOMParser().parseFromString(texto
 /** "lng,lat,alt lng,lat,alt …" → [[lat,lng], …] */
 const coordsKML = (s: string): [number, number][] => s.split(/\s+/).map(t => t.split(",")).filter(p => p.length >= 2).map(p => [parseFloat(p[1]), parseFloat(p[0])] as [number, number]).filter(c => valida(c[0], c[1]));
 
+const COLORES_MAPSME: Record<string, string> = { red: "#e53935", blue: "#1e88e5", purple: "#8e24aa", yellow: "#fdd835", pink: "#ec407a", brown: "#6d4c41", green: "#43a047", orange: "#fb8c00", deeppurple: "#5e35b1", lightblue: "#29b6f6", cyan: "#00acc1", teal: "#00897b", lime: "#c0ca33", deeporange: "#f4511e", gray: "#757575", bluegray: "#546e7a" };
+/** En KML los colores vienen como aabbggrr; aquí se pasan a #rrggbb. */
+const colorKML = (c?: string | null) => { const m = (c || "").trim().match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i); return m ? `#${m[4]}${m[3]}${m[2]}`.toLowerCase() : undefined; };
+/** maps.me nombra sus estilos con el color (placemark-red, track-blue…). */
+const colorPorNombre = (id: string) => { const m = id.toLowerCase().replace(/[^a-z]/g, ""); const k = Object.keys(COLORES_MAPSME).sort((a, b) => b.length - a.length).find(c => m.includes(c)); return k ? COLORES_MAPSME[k] : undefined; };
+
+function estilosKML(d: Document) {
+  const porId: Record<string, { linea?: string; icono?: string }> = {};
+  Array.from(d.getElementsByTagName("Style")).forEach(st => { const id = st.getAttribute("id"); if (!id) return; const l = colorKML(st.getElementsByTagName("LineStyle")[0]?.getElementsByTagName("color")[0]?.textContent), ic = st.getElementsByTagName("IconStyle")[0], ci = colorKML(ic?.getElementsByTagName("color")[0]?.textContent), href = ic?.getElementsByTagName("href")[0]?.textContent || ""; porId[id] = { linea: l, icono: ci && ci !== "#ffffff" ? ci : colorPorNombre(href.split("/").pop() || "") }; });
+  Array.from(d.getElementsByTagName("StyleMap")).forEach(sm => { const id = sm.getAttribute("id"); const normal = Array.from(sm.getElementsByTagName("Pair")).find(p => (p.getElementsByTagName("key")[0]?.textContent || "").trim() === "normal"); const ref = (normal?.getElementsByTagName("styleUrl")[0]?.textContent || "").replace("#", "").trim(); if (id && porId[ref]) porId[id] = porId[ref]; });
+  return porId;
+}
+
 export function parseKML(texto: string): Geo[] {
-  const d = xml(texto), out: Geo[] = [];
+  const d = xml(texto), out: Geo[] = [], estilos = estilosKML(d);
   Array.from(d.getElementsByTagName("Placemark")).forEach(pm => {
     const nombre = textoDe(pm, "name") || "Sin nombre", descripcion = limpiarHtml(textoDe(pm, "description")) || undefined;
-    Array.from(pm.getElementsByTagName("Point")).forEach(p => { const c = coordsKML(p.getElementsByTagName("coordinates")[0]?.textContent || ""); if (c.length) out.push({ tipo: "punto", nombre, descripcion, coords: [c[0]] }); });
-    Array.from(pm.getElementsByTagName("LineString")).forEach(l => { const c = coordsKML(l.getElementsByTagName("coordinates")[0]?.textContent || ""); if (c.length >= 2) out.push({ tipo: "linea", nombre, descripcion, coords: c }); });
-    Array.from(pm.getElementsByTagName("Polygon")).forEach(g => { const anillo = g.getElementsByTagName("outerBoundaryIs")[0]?.getElementsByTagName("coordinates")[0] || g.getElementsByTagName("coordinates")[0]; const c = coordsKML(anillo?.textContent || ""); if (c.length >= 3) out.push({ tipo: "poligono", nombre, descripcion, coords: c }); });
-    Array.from(pm.getElementsByTagName("gx:Track")).forEach(t => { const c = Array.from(t.getElementsByTagName("gx:coord")).map(x => (x.textContent || "").trim().split(/\s+/)).filter(p => p.length >= 2).map(p => [parseFloat(p[1]), parseFloat(p[0])] as [number, number]).filter(c => valida(c[0], c[1])); if (c.length >= 2) out.push({ tipo: "linea", nombre, descripcion, coords: c }); });
+    const ref = textoDe(pm, "styleUrl").replace("#", ""), inline = hijo(pm, "Style"), propio = inline ? { linea: colorKML(inline.getElementsByTagName("LineStyle")[0]?.getElementsByTagName("color")[0]?.textContent), icono: colorKML(inline.getElementsByTagName("IconStyle")[0]?.getElementsByTagName("color")[0]?.textContent) } : null;
+    const est = propio?.linea || propio?.icono ? propio : estilos[ref] || {}, porNombre = ref ? colorPorNombre(ref) : undefined;
+    const cPunto = est.icono || porNombre, cLinea = est.linea || porNombre;
+    Array.from(pm.getElementsByTagName("Point")).forEach(p => { const c = coordsKML(p.getElementsByTagName("coordinates")[0]?.textContent || ""); if (c.length) out.push({ tipo: "punto", nombre, descripcion, coords: [c[0]], color: cPunto }); });
+    Array.from(pm.getElementsByTagName("LineString")).forEach(l => { const c = coordsKML(l.getElementsByTagName("coordinates")[0]?.textContent || ""); if (c.length >= 2) out.push({ tipo: "linea", nombre, descripcion, coords: c, color: cLinea }); });
+    Array.from(pm.getElementsByTagName("Polygon")).forEach(g => { const anillo = g.getElementsByTagName("outerBoundaryIs")[0]?.getElementsByTagName("coordinates")[0] || g.getElementsByTagName("coordinates")[0]; const c = coordsKML(anillo?.textContent || ""); if (c.length >= 3) out.push({ tipo: "poligono", nombre, descripcion, coords: c, color: cLinea }); });
+    Array.from(pm.getElementsByTagName("gx:Track")).forEach(t => { const c = Array.from(t.getElementsByTagName("gx:coord")).map(x => (x.textContent || "").trim().split(/\s+/)).filter(p => p.length >= 2).map(p => [parseFloat(p[1]), parseFloat(p[0])] as [number, number]).filter(c => valida(c[0], c[1])); if (c.length >= 2) out.push({ tipo: "linea", nombre, descripcion, coords: c, color: cLinea }); });
   });
   return out;
 }
@@ -57,6 +73,7 @@ export async function textoDeKMZ(buf: ArrayBuffer): Promise<string> {
 /** Lee un archivo KML, KMZ o GPX y devuelve sus puntos, líneas y áreas. */
 export async function leerArchivoGeo(archivo: File): Promise<Geo[]> {
   const nombre = archivo.name.toLowerCase();
+  if (nombre.endsWith(".kmb")) throw new Error("Ese archivo es de una versión antigua de maps.me (.kmb) y no se puede leer. En maps.me abre el marcador, toca Exportar y elige KMZ o KML; luego súbelo aquí.");
   const r = nombre.endsWith(".kmz") ? parseKML(await textoDeKMZ(await archivo.arrayBuffer())) : nombre.endsWith(".kml") ? parseKML(await archivo.text()) : nombre.endsWith(".gpx") ? parseGPX(await archivo.text()) : null;
   if (r === null) throw new Error("Solo se pueden abrir archivos KML, KMZ o GPX.");
   if (!r.length) throw new Error("El archivo se leyó bien, pero no trae puntos ni líneas.");

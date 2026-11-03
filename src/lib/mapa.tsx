@@ -19,10 +19,10 @@ const BASES: Record<string, { url: (z: number, x: number, y: number) => string; 
   satelite: { url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, texto: "Imagen © Esri" },
 };
 
-type Props = { puntos: PuntoMapa[]; lineas: LineaMapa[]; base?: "calle" | "satelite"; alto?: number; ajustar?: number; onClickMapa?: (lat: number, lng: number) => void; usuario?: { lat: number; lng: number } | null; marca?: { lat: number; lng: number } | null; irA?: { lat: number; lng: number; z?: number; k: number } | null };
+type Props = { puntos: PuntoMapa[]; lineas: LineaMapa[]; base?: "calle" | "satelite"; alto?: number; ajustar?: number; onClickMapa?: (lat: number, lng: number) => void; usuario?: { lat: number; lng: number } | null; marca?: { lat: number; lng: number } | null; irA?: { lat: number; lng: number; z?: number; k: number } | null; ajustarA?: [number, number][] | null };
 
 /** Mapa interactivo: arrastrar, zoom con rueda o pellizco, puntos, líneas y ventana de información al tocar. */
-export function MapaBase({ puntos, lineas, base = "calle", alto = 520, ajustar = 0, onClickMapa, usuario, marca, irA }: Props) {
+export function MapaBase({ puntos, lineas, base = "calle", alto = 520, ajustar = 0, onClickMapa, usuario, marca, irA, ajustarA }: Props) {
   const caja = useRef<HTMLDivElement>(null), [tam, setTam] = useState({ w: 800, h: alto }), [v, setV] = useState<Vista>({ x: nx(-66.157), y: ny(-17.393), z: 12 });
   const [sel, setSel] = useState<{ tipo: "p" | "l"; id: string; px: number; py: number } | null>(null);
   const punteros = useRef(new Map<number, { x: number; y: number }>()), mov = useRef(0), pinch = useRef<number | null>(null), ultimaRueda = useRef(0);
@@ -34,7 +34,7 @@ export function MapaBase({ puntos, lineas, base = "calle", alto = 520, ajustar =
 
   /** Ajusta el mapa para que se vea todo lo que hay (puntos y líneas). */
   const ajustarTodo = () => {
-    const pts: [number, number][] = [...puntos.map(p => [p.lat, p.lng] as [number, number]), ...lineas.flatMap(l => l.coords)];
+    const pts: [number, number][] = ajustarA && ajustarA.length ? ajustarA : [...puntos.map(p => [p.lat, p.lng] as [number, number]), ...lineas.flatMap(l => l.coords)];
     if (!pts.length) return;
     const lats = pts.map(p => p[0]), lngs = pts.map(p => p[1]), a = Math.min(...lats), b = Math.max(...lats), c = Math.min(...lngs), d = Math.max(...lngs);
     const w = Math.max(200, tam.w - 90), h = Math.max(200, tam.h - 90); let z = ZMAX;

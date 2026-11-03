@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Aviso } from "../lib/ui";
+import { VERSION } from "../version";
 
 export default function Login() {
   const [email, setEmail] = useState(""), [clave, setClave] = useState(""), [error, setError] = useState(""), [cargando, setCargando] = useState(false);
@@ -14,5 +15,5 @@ export default function Login() {
     <form className="card" onSubmit={entrar}><h2>Ingresar</h2>{error && <Aviso tipo="mal">{error}</Aviso>}
       <label className="campo"><span>Correo</span><input type="email" required value={email} onChange={e => setEmail(e.target.value)} autoComplete="username" /></label>
       <label className="campo"><span>Contraseña</span><input type="password" required value={clave} onChange={e => setClave(e.target.value)} autoComplete="current-password" /></label>
-      <button className="btn" style={{ width: "100%" }} disabled={cargando}>{cargando ? "Entrando…" : "Entrar"}</button></form></div>;
+      <button className="btn" style={{ width: "100%" }} disabled={cargando}>{cargando ? "Entrando…" : "Entrar"}</button></form><p className="mute" style={{ textAlign: "center", fontSize: 11 }}>Vortex · versión {VERSION}</p></div>;
 }

@@ -11,7 +11,9 @@ const vacio = Promise.resolve({ data: [], error: null });
 type Uso = "cliente" | "nap" | "viaje" | "materiales" | "zona";
 const FORMS: { id: string; nombre: string; desc: string; usa: Uso }[] = [
   { id: "contrato", nombre: "Contrato de servicio", desc: "Con permanencia mínima de 1 año y devolución de equipos. Se llena con los datos del cliente.", usa: "cliente" },
-  { id: "instalacion", nombre: "Orden de instalación", desc: "Para el técnico: datos del cliente, equipos, materiales, mediciones y firmas.", usa: "cliente" },
+  { id: "instalacion", nombre: "Orden de instalación", desc: "Para el técnico: datos del cliente, equipos, materiales, mediciones y firmas. Se puede escanear con la cámara.", usa: "cliente" },
+  { id: "baja", nombre: "Orden de baja de servicio", desc: "Motivo, equipos recuperados y su estado, con firmas. Se puede escanear con la cámara.", usa: "cliente" },
+  { id: "mantenimiento", nombre: "Orden de mantenimiento", desc: "Qué se atendió, solución, materiales y costo. Se puede escanear con la cámara.", usa: "zona" },
   { id: "nap", nombre: "Ficha de NAP", desc: "Puertos de una NAP con su estado y a quién pertenece cada uno.", usa: "nap" },
   { id: "troncal", nombre: "Registro de troncal", desc: "Ruta, longitud, hilos y postes de una troncal.", usa: "zona" },
   { id: "fusiones", nombre: "Registro de fusiones", desc: "Planilla para anotar cada fusión de hilos con su pérdida.", usa: "zona" },
@@ -66,9 +68,10 @@ function Instalacion({ c, zona, equipos, puerto, nap }: any) {
     <Cab titulo="ORDEN DE INSTALACIÓN" sub={zona ? "Zona: " + zona.nombre : undefined} />
     <h2>Datos del cliente</h2>
     <D e="Código" v={c?.codigo} w={90} /><D e="Nombre" v={c?.nombre} w={280} /><D e="C.I." v={c?.ci} w={110} /><br />
-    <D e="Dirección" v={c?.direccion} w={380} /><D e="Teléfono" v={c?.telefono} w={110} />
+    <D e="Dirección" v={c?.direccion} w={380} /><D e="Teléfono" v={c?.telefono} w={110} /><br />
+    <D e="Referencia (nombre)" w={220} /><D e="Teléfono de la referencia" w={110} />
     <h2>Servicio</h2>
-    <D e="Plan" v={c?.plan_nombre} w={120} /><D e="Mbps" v={c?.mbps} w={60} /><D e="Precio mensual" v={c ? bs(c.precio_mensual) : ""} w={100} /><D e="NAP" v={nap?.codigo} w={90} /><D e="Puerto" v={puerto?.numero} w={50} />
+    <D e="Plan" v={c?.plan_nombre} w={120} /><D e="Mbps" v={c?.mbps} w={60} /><D e="Precio mensual" v={c ? bs(c.precio_mensual) : ""} w={100} /><D e="Precio de instalación" v={c ? bs(c.precio_instalacion) : ""} w={100} /><D e="NAP" v={nap?.codigo} w={90} /><D e="Puerto" v={puerto?.numero} w={50} />
     <h2>Equipos instalados</h2>
     <Tabla cols={["Equipo", "Modelo", "N° de serie", "MAC"]} filas={(equipos || []).map((e: any) => ["", e.modelo || "", e.serie || "", e.mac || ""])} vacias={Math.max(2, 4 - (equipos || []).length)} />
     <h2>Materiales usados</h2>
@@ -94,6 +97,48 @@ function FichaNap({ nap, zona, puertos, clientesNap }: any) {
     {nap ? <Tabla cols={["Puerto", "Estado", "Cliente o reservado para", "Observación"]} filas={filas} /> : <Tabla cols={["Puerto", "Estado", "Cliente o reservado para", "Observación"]} vacias={16} />}
     <h2>Observaciones</h2><div className="linea" style={{ display: "block", minHeight: 40 }} />
     <D e="Revisado por" w={200} /><D e="Fecha" w={100} />
+  </>;
+}
+
+function Baja({ c, zona, equipos, puerto, nap }: any) {
+  return <>
+    <Cab titulo="ORDEN DE BAJA DE SERVICIO" sub={zona ? "Zona: " + zona.nombre : undefined} />
+    <h2>Datos del cliente</h2>
+    <D e="Código" v={c?.codigo} w={90} /><D e="Nombre" v={c?.nombre} w={280} /><D e="C.I." v={c?.ci} w={110} /><br />
+    <D e="Dirección" v={c?.direccion} w={380} /><D e="Teléfono" v={c?.telefono} w={110} />
+    <h2>Servicio</h2>
+    <D e="Plan" v={c?.plan_nombre} w={120} /><D e="NAP" v={nap?.codigo} w={90} /><D e="Puerto" v={puerto?.numero} w={50} />
+    <h2>Baja</h2>
+    <D e="Fecha de la baja" w={130} />
+    <p style={{ margin: "6px 0 2px" }}><b>Motivo (marca uno):</b></p>
+    <Casilla>Cambio de domicilio</Casilla><Casilla>Mala calidad del servicio</Casilla><Casilla>Precio</Casilla><Casilla>Falta de pago</Casilla><Casilla>Se pasó a otro proveedor</Casilla><Casilla>Ya no necesita internet</Casilla><Casilla>Otro: <L w={260} /></Casilla>
+    <h2>Equipos recuperados</h2>
+    <Tabla cols={["Equipo", "Modelo", "N° de serie", "MAC"]} filas={(equipos || []).map((e: any) => ["", e.modelo || "", e.serie || "", e.mac || ""])} vacias={Math.max(2, 4 - (equipos || []).length)} />
+    <p style={{ margin: "6px 0 2px" }}><b>Destino del equipo (marca uno):</b></p>
+    <Casilla>Almacén</Casilla><Casilla>Mantenimiento</Casilla><Casilla>Descarte</Casilla><Casilla>Aún no recuperado</Casilla>
+    <D e="Estado físico y accesorios" w={440} />
+    <br /><D e="Autorizó" w={220} /><D e="Técnico" w={220} />
+    <Firmas a="Técnico" b={`Conformidad del cliente${c ? " · " + c.nombre : ""}`} />
+  </>;
+}
+
+function Mantenimiento({ zona }: any) {
+  return <>
+    <Cab titulo="ORDEN DE MANTENIMIENTO" sub={zona ? "Zona: " + zona.nombre : undefined} />
+    <h2>Qué se atiende (marca uno)</h2>
+    <Casilla>NAP</Casilla><Casilla>Red troncal</Casilla><Casilla>Equipo</Casilla><Casilla>Cambio de antena</Casilla><Casilla>Otro</Casilla>
+    <D e="Cuál (código de la NAP, troncal o equipo)" w={300} />
+    <h2>Tipo de trabajo (marca uno)</h2>
+    <Casilla>Correctivo</Casilla><Casilla>Preventivo</Casilla><Casilla>Reemplazo de equipo</Casilla><Casilla>Reparación de fibra</Casilla><Casilla>Cambio de NAP o puerto</Casilla>
+    <h2>Problema o trabajo</h2><div className="linea" style={{ display: "block", minHeight: 44 }} />
+    <h2>Solución aplicada</h2><div className="linea" style={{ display: "block", minHeight: 44 }} />
+    <h2>Materiales usados</h2>
+    <Tabla cols={["Material", "Cantidad", "Unidad"]} vacias={5} />
+    <h2>Mediciones</h2>
+    <D e="Potencia antes (dBm)" w={90} /><D e="Potencia después (dBm)" w={90} />
+    <h2>Cierre</h2>
+    <D e="Costo total (Bs)" w={100} /><D e="Fecha" w={130} /><D e="Técnico" w={220} />
+    <Firmas a="Técnico" b="Conformidad del responsable" />
   </>;
 }
 
@@ -174,7 +219,7 @@ export default function Formularios() {
 
   return <>
     <h1>Formularios</h1>
-    <Aviso>Elige un formulario, y si quieres, el registro con el que se llena solo. Puedes <b>escribir sobre la hoja</b> para ajustar el texto antes de imprimir. Para guardar en PDF, en la ventana de impresión elige "Guardar como PDF".</Aviso>
+    <Aviso>Elige un formulario, y si quieres, el registro con el que se llena solo. Puedes <b>escribir sobre la hoja</b> para ajustar el texto antes de imprimir. Para guardar en PDF, en la ventana de impresión elige "Guardar como PDF". <b>Las órdenes de instalación, baja y mantenimiento se pueden llenar a mano y luego fotografiar:</b> la app lee la foto y llena todo sola (botón "Escanear formulario" en Instalaciones y servicios).</Aviso>
     <div className="grid g2" style={{ marginBottom: 14 }}>
       <div className="card"><h2>1. Elige el formulario</h2><div style={{ display: "grid", gap: 6 }}>{FORMS.map(f => <button key={f.id} className={"btn suave" + (f.id === formId ? " on" : "")} style={{ textAlign: "left", outline: f.id === formId ? "2px solid var(--acc)" : undefined }} onClick={() => elegir(f.id)}><b>{f.nombre}</b><br /><span className="mute" style={{ fontWeight: 400 }}>{f.desc}</span></button>)}</div></div>
       <div className="card"><h2>2. Llénalo con datos (opcional)</h2>
@@ -191,6 +236,8 @@ export default function Formularios() {
     {cargando ? <Cargando /> : <div className="hoja" key={formId + rec + version + soloBajos} contentEditable suppressContentEditableWarning>
       {formId === "contrato" && <Contrato c={C} zona={zona} equipos={ep} puerto={pu} nap={nc ? { codigo: nc.codigo } : null} />}
       {formId === "instalacion" && <Instalacion c={C} zona={zona} equipos={ep} puerto={pu} nap={nc} />}
+      {formId === "baja" && <Baja c={C} zona={zona} equipos={ep} puerto={pu} nap={nc} />}
+      {formId === "mantenimiento" && <Mantenimiento zona={zona} />}
       {formId === "nap" && <FichaNap nap={N} zona={zona} puertos={(puertos.data as any[]) || []} clientesNap={(clientesNap.data as any[]) || []} />}
       {formId === "troncal" && <Troncal zona={zona} />}
       {formId === "fusiones" && <Fusiones zona={zona} />}

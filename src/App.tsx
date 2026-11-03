@@ -16,18 +16,21 @@ import Formularios from "./pages/Formularios";
 import Reportes from "./pages/Reportes";
 import { AlertasProvider, ContadorAlertas, useAlertas } from "./lib/alertas";
 import { BuscadorGlobal } from "./pages/BuscadorGlobal";
+import { VERSION } from "./version";
 
 const RUTAS: [string, string, string | null][] = [
   ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
   ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
 ];
 const MODULO_RUTA: Record<string, string> = { red: "red", clientes: "clientes", cobranzas: "cobranzas", servicios: "instalaciones", campo: "instalaciones", inventario: "inventario", finanzas: "finanzas", formularios: "formularios", reportes: "reportes" };
-const CONFIG = ["configuracion", "zonas", "usuarios", "papelera"];
+const ICONOS: Record<string, string> = { dashboard: "🏠", red: "🌐", clientes: "👥", servicios: "🛠️", inventario: "📦", finanzas: "💰", formularios: "🖨️", alertas: "🔔", reportes: "📊", configuracion: "⚙️" };
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
 export default function App() {
   const { cargando, sesion, perfil, proyectos, zonas, proyectoId, setProyectoId, zonaId, setZonaId, salir, puede } = useApp();
-  const ruta = useHash(), [busq, setBusq] = useState(0);
+  const ruta = useHash(), [busq, setBusq] = useState(0), [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [ruta]);
+  useEffect(() => { const f = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false); addEventListener("keydown", f); return () => removeEventListener("keydown", f); }, []);
   if (!configurado) return <div className="login"><img src="/logo.png" alt="Vortex" /><Aviso tipo="mal"><b>Falta conectar Supabase.</b> Abre el archivo <code>src/config.ts</code> y pega tu Project URL y tu clave pública (paso 4 de la guía).</Aviso></div>;
   if (cargando) return <div className="login"><img src="/logo.png" alt="Vortex" /><Cargando /></div>;
   if (!sesion) return <Login />;
@@ -43,14 +46,31 @@ export default function App() {
       default: return <Dashboard />;
     }
   };
+  const alias: Record<string, string> = { cobranzas: "clientes", campo: "servicios", zonas: "configuracion", usuarios: "configuracion", papelera: "configuracion", roles: "configuracion", socios: "configuracion" }, actual = alias[ruta] || ruta, seccion = RUTAS.find(r => r[0] === actual)?.[1] || "Dashboard";
   return <AlertasProvider>
-    <header className="topnav"><div className="fila"><img src="/logo.png" alt="Vortex, internet de fibra óptica" /><nav className="nav">{items.map(([k, l]) => <a key={k} href={"#/" + k} className={ruta === k || (k === "clientes" && ruta === "cobranzas") || (k === "configuracion" && CONFIG.includes(ruta)) ? "on" : ""}>{l}{k === "alertas" && <ContadorAlertas />}</a>)}</nav></div></header>
-    <div className="barra">
-      {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los proyectos" : "Todos mis proyectos"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
-      <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
-      <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); }} />
-      <Campana />
-      <details className="menu-usuario"><summary>👤 {perfil.nombre || perfil.email} ▾</summary><div className="desplegable"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{perfil.email}</small><br /><small className="mute">Rol: {NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div></div></details>
+    <div className={"lateral-fondo" + (menu ? " abierto" : "")} onClick={() => setMenu(false)} />
+    <aside className={"lateral" + (menu ? " abierto" : "")} aria-label="Menú principal" aria-hidden={!menu}>
+      <div className="fila entre" style={{ marginBottom: 10 }}><img src="/logo.png" alt="Vortex, internet de fibra óptica" style={{ height: 36 }} /><button className="btn suave chico" onClick={() => setMenu(false)} aria-label="Cerrar el menú">✕</button></div>
+      <div className="lateral-filtros">
+        {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los proyectos" : "Todos mis proyectos"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
+        <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
+        <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); setMenu(false); }} />
+      </div>
+      <nav>{items.map(([k, l]) => <a key={k} href={"#/" + k} className={actual === k ? "on" : ""} onClick={() => setMenu(false)}><span className="ico">{ICONOS[k]}</span><span>{l}</span>{k === "alertas" && <ContadorAlertas />}</a>)}</nav>
+      <div className="lateral-pie"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div><div className="mute" style={{ marginTop: 8, fontSize: 11 }}>Vortex · versión {VERSION}</div></div>
+    </aside>
+    <div className="topbar">
+      <button className="hamb" onClick={() => setMenu(true)} aria-label="Abrir el menú" aria-expanded={menu}><span /><span /><span /></button>
+      <img className="logo-mini" src="/logo.png" alt="Vortex" /><b className="seccion">{seccion}</b>
+      <div className="controles">
+        {proyectos.length > 1 && <select aria-label="Proyecto" value={proyectoId} onChange={e => { setProyectoId(e.target.value); setZonaId(""); }}><option value="">{perfil.rol === "admin" ? "Todos los proyectos" : "Todos mis proyectos"}</option>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>}
+        <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
+        <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); }} />
+      </div>
+      <div className="acciones">
+        <Campana />
+        <details className="menu-usuario"><summary>👤 {perfil.nombre || perfil.email} ▾</summary><div className="desplegable"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{perfil.email}</small><br /><small className="mute">Rol: {NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div style={{ marginTop: 8 }}><button className="btn suave chico" onClick={salir}>Salir</button></div></div></details>
+      </div>
     </div>
     <main key={busq}>{pagina()}</main>
   </AlertasProvider>;

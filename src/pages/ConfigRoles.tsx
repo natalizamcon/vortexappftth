@@ -25,7 +25,7 @@ export function ConfigRoles() {
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
-  return <div className="grid" style={{ gridTemplateColumns: "minmax(200px, 1fr) minmax(0, 4fr)", alignItems: "start" }}>
+  return <div className="grid roles-layout">
     <div className="card"><h2>Roles</h2>
       {R.map(r => <button key={r.clave} onClick={() => setSel(r.clave)} style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 6, padding: "8px 10px", borderRadius: 8, border: r.clave === rol.clave ? "1px solid var(--lil)" : "1px solid transparent", background: r.clave === rol.clave ? "var(--lilb)" : "transparent", cursor: "pointer", font: "inherit", color: "var(--ink)" }}>{r.nombre}<br /><small className="mute">{r.activo ? "Activo" : "Disponible, sin activar"}{!r.sistema ? " · propio" : ""}</small></button>)}
       <button className="btn suave" style={{ width: "100%" }} onClick={() => setNuevo(true)}>+ Crear rol</button></div>

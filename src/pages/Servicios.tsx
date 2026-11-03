@@ -9,11 +9,11 @@ import { Instaladores } from "./ServiciosInstaladores";
 import { AvanceViajes } from "./ServiciosAvance";
 
 /** Acción que el panel o una orden de trabajo le pide a otra pestaña (por ejemplo: abrir el formulario de nueva instalación). */
-export type Accion = { nueva?: boolean; orden?: any; ts: number } | null;
+export type Accion = { nueva?: boolean; orden?: any; archivo?: File; ts: number } | null;
 
 export default function Servicios({ inicial }: { inicial?: string }) {
   const [tab, setTab] = useState(inicial || "panel"), [accion, setAccion] = useState<Accion>(null), [filtro, setFiltro] = useState("");
-  const ir = (t: string, a?: { nueva?: boolean; orden?: any }, f?: string) => { setFiltro(f || ""); setAccion(a ? { ...a, ts: Date.now() } : null); setTab(t); };
+  const ir = (t: string, a?: { nueva?: boolean; orden?: any; archivo?: File }, f?: string) => { setFiltro(f || ""); setAccion(a ? { ...a, ts: Date.now() } : null); setTab(t); };
   return <>
     <BotonesNuevo />
     <Tabs items={[["panel", "Panel operativo"], ["instalaciones", "Instalaciones"], ["bajas", "Bajas"], ["mantenimientos", "Mantenimientos"], ["instaladores", "Instaladores"], ["avance", "Avance y viajes"]]} valor={tab} onChange={t => ir(t)} />

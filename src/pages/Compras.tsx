@@ -64,7 +64,7 @@ export default function Compras() {
         <tbody>{L.map(x => <tr key={x.id}><td>{x.articulo}<br /><small className="mute">{x.categoria} · {x.fecha}{x.proveedor ? " · " + x.proveedor : ""}{proyectos.length > 1 && x.proyecto_id ? " · " + nombreProy(x.proyecto_id) : ""}</small></td><td>{x.cantidad}</td><td>{bs(n(x.cantidad) * n(x.costo_unitario))}</td>
           <td>{x.material_id && x.proyecto_id ? <select value={x.almacen_id || ""} onChange={e => mover(x, e.target.value)}>{almDe(x.proyecto_id).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select> : <><small className="mute">{x.ubicacion || "Sin ubicación"} · no está en el inventario</small><br /><button className="btn chico" onClick={() => alInventario(x)}>Pasar al inventario</button></>}</td>
           <td><select value={x.estado} onChange={e => cambiar(x, { estado: e.target.value })}>{ESTADOS.map(u => <option key={u}>{u}</option>)}</select></td>
-          <td><div className="fila">{x.foto_path && <button className="btn suave chico" onClick={() => ver(x.foto_path)}>Ver</button>}<button className="btn suave chico" onClick={() => quitar(x)}>Papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay compras registradas.</Vacio>}
+          <td><div className="fila">{x.foto_path && <button className="btn suave chico" onClick={() => ver(x.foto_path)}>Ver factura</button>}<button className="btn suave chico" onClick={() => quitar(x)}>Papelera</button></div></td></tr>)}</tbody></table> : <Vacio>Aún no hay compras registradas.</Vacio>}
         <p className="mute" style={{ marginTop: 10 }}>Si cambias el almacén de una compra, el material se mueve también en el inventario. Lo que mandes a la papelera lo recuperas desde Configuración → Papelera.</p></div>
     </div>
   </>;

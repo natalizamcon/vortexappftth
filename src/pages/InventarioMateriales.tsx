@@ -6,7 +6,7 @@ import { Aviso, Campo, Vacio, bs, useProyecto } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
 import { FormModal } from "../lib/formmodal";
 import Crud from "../lib/crud";
-import { FormIngreso, PROVEEDORES, cantEn } from "./InventarioAlmacenes";
+import { FacturasMaterial, FormIngreso, PROVEEDORES, cantEn } from "./InventarioAlmacenes";
 
 const n = (x: any) => Number(x) || 0;
 const CATEGORIAS = ["ONT/ONU", "Cable", "Ferretería", "Accesorio", "Conector", "Herramienta", "Otros"];
@@ -65,10 +65,11 @@ function Materiales({ pid, A, M, S, recargar }: any) {
           <td><b>{s}</b> {m.unidad} {s < n(m.minimo) && <span className="pill warn" style={{ marginLeft: 4 }}>Bajo mínimo</span>}</td>
           <td><input type="number" min={0} step="any" style={{ width: 80 }} defaultValue={n(m.minimo)} key={m.id + "min" + m.minimo} onBlur={e => n(e.target.value) !== n(m.minimo) && guardar(m, { minimo: n(e.target.value) })} /></td>
           <td><input type="number" min={0} step={0.01} style={{ width: 90 }} defaultValue={n(m.costo)} key={m.id + "c" + m.costo} title="Costo por unidad: se puede cambiar" onBlur={e => n(e.target.value) !== n(m.costo) && guardar(m, { costo: n(e.target.value) })} /></td>
-          <td><div className="fila"><button className="btn chico" onClick={() => setPanel({ t: "comprar", m })}>Comprar</button><button className="btn suave chico" onClick={() => setPanel({ t: "quitar", m })}>Quitar</button><button className="btn suave chico" onClick={() => setEd(m)}>Editar</button><button className="btn suave chico" onClick={() => quitar(m)}>Papelera</button></div></td></tr>; })}</tbody></table> : <Vacio>Aún no hay materiales. Agrega el primero arriba.</Vacio>}</div>
+          <td><div className="fila"><button className="btn chico" onClick={() => setPanel({ t: "comprar", m })}>Comprar</button><button className="btn suave chico" onClick={() => setPanel({ t: "quitar", m })}>Quitar</button><button className="btn suave chico" onClick={() => setPanel({ t: "facturas", m })}>Facturas</button><button className="btn suave chico" onClick={() => setEd(m)}>Editar</button><button className="btn suave chico" onClick={() => quitar(m)}>Papelera</button></div></td></tr>; })}</tbody></table> : <Vacio>Aún no hay materiales. Agrega el primero arriba.</Vacio>}</div>
 
     {panel?.t === "comprar" && <Drawer titulo={"Comprar · " + panel.m.nombre} onClose={() => setPanel(null)}><FormIngreso A={A} M={M} S={S} almacenInicial={alm} materialInicial={panel.m.id} onListo={recargar} /></Drawer>}
     {panel?.t === "quitar" && <Drawer titulo={"Quitar · " + panel.m.nombre} onClose={() => setPanel(null)}><FormQuitar m={panel.m} A={A} S={S} almInicial={alm} onListo={() => { recargar(); }} /></Drawer>}
+    {panel?.t === "facturas" && <Drawer titulo={"Facturas · " + panel.m.nombre} onClose={() => setPanel(null)}><FacturasMaterial m={panel.m} A={A} /></Drawer>}
     {ed && <FormModal titulo={"Editar · " + ed.nombre} valores={ed} onClose={() => setEd(null)} campos={[{ k: "nombre", l: "Nombre", req: true }, { k: "categoria", l: "Categoría" }, { k: "unidad", l: "Unidad", req: true }, { k: "marca", l: "Marca" }, { k: "modelo", l: "Modelo" }, { k: "proveedor", l: "Proveedor" }]}
       onGuardar={async v => { const { error } = await supabase.from("materiales").update(v).eq("id", ed.id); if (error) return /duplicate key|unique/i.test(error.message) ? "Ya existe un material con ese nombre." : error.message; recargar(); }} />}
   </>;

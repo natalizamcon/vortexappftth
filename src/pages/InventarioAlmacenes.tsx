@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { Aviso, Campo, Cargando, Vacio, bs, useQuery } from "../lib/ui";
 
 const n = (x: any) => Number(x) || 0;
@@ -10,14 +10,16 @@ export const totalDe = (S: any[], m: string) => S.filter(x => x.material_id === 
 /** Ingresar material a un almacén con el precio realmente pagado (si hubo descuento, se anota con ese precio). */
 export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo }: { A: any[]; M: any[]; S: any[]; almacenInicial?: string; materialInicial?: string; onListo: () => void }) {
   const [f, setF] = useState({ almacen: almacenInicial || A[0]?.id || "", material: materialInicial || "", cantidad: "1", precio: String(n(M.find(x => x.id === materialInicial)?.costo)), proveedor: "Digicorp" });
-  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [fact, setFact] = useState<File | null>(null);
   const m = M.find(x => x.id === f.material), antes = m ? totalDe(S, m.id) : 0, cant = n(f.cantidad), precio = n(f.precio);
   const nuevoCosto = m && antes + cant > 0 ? Math.round(((antes * n(m.costo) + cant * precio) / (antes + cant)) * 100) / 100 : precio;
   const elegir = (id: string) => setF(x => ({ ...x, material: id, precio: String(n(M.find(y => y.id === id)?.costo)), proveedor: M.find(y => y.id === id)?.proveedor || x.proveedor }));
   const guardar = async () => {
     setMsg(""); setOk(""); if (!f.almacen) return setMsg("Elige el almacén de destino."); if (!m) return setMsg("Elige el artículo."); if (!(cant > 0)) return setMsg("La cantidad debe ser mayor a 0."); if (f.precio === "" || precio < 0) return setMsg("Escribe el precio unitario pagado (puede ser 0 si fue un regalo).");
-    setOcup(true); const { error } = await supabase.rpc("registrar_compra", { p_material: m.id, p_almacen: f.almacen, p_cantidad: cant, p_precio: precio, p_proveedor: f.proveedor || null, p_ref: null }); setOcup(false);
-    if (error) return setMsg(error.message); setOk(`Ingresaron ${cant} ${m.unidad} de ${m.nombre} a ${precio ? bs(precio) : "precio 0"} cada una.`); setF({ ...f, cantidad: "1" }); onListo();
+    setOcup(true);
+    let ruta: string | null = null; try { if (fact) ruta = await subirArchivo("comprobantes", m.proyecto_id, fact); } catch (e: any) { setOcup(false); return setMsg(e.message); }
+    const { error } = await supabase.rpc("registrar_compra", { p_material: m.id, p_almacen: f.almacen, p_cantidad: cant, p_precio: precio, p_proveedor: f.proveedor || null, p_ref: null, p_factura: ruta }); setOcup(false);
+    if (error) return setMsg(error.message); setOk(`Ingresaron ${cant} ${m.unidad} de ${m.nombre} a ${precio ? bs(precio) : "precio 0"} cada una${ruta ? ", con su factura" : ""}.`); setF({ ...f, cantidad: "1" }); setFact(null); onListo();
   };
   return <div className="card"><h2>Ingresar material a un almacén</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="form" style={{ gridTemplateColumns: "1fr" }}>
@@ -25,6 +27,7 @@ export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo 
       <Campo l="Artículo"><select value={f.material} onChange={e => elegir(e.target.value)} disabled={!!materialInicial}><option value="">Elige…</option>{M.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></Campo>
       <Campo l="Cantidad"><input type="number" min={0} step="any" value={f.cantidad} onChange={e => setF({ ...f, cantidad: e.target.value })} /></Campo>
       <Campo l="Precio unitario pagado (Bs)"><input type="number" min={0} step={0.01} value={f.precio} onChange={e => setF({ ...f, precio: e.target.value })} /></Campo>
+      <Campo l="Factura (foto o PDF, opcional)"><input type="file" accept="image/*,.pdf" key={String(ok)} onChange={e => setFact(e.target.files?.[0] || null)} /></Campo>
       <Campo l="Proveedor"><input list="prov-inv" value={f.proveedor} onChange={e => setF({ ...f, proveedor: e.target.value })} /><datalist id="prov-inv">{PROVEEDORES.map(p => <option key={p} value={p} />)}</datalist></Campo></div>
     {m && cant > 0 && <p className="mute" style={{ margin: "8px 0 0" }}>Total de la compra: <b>{bs(cant * precio)}</b>. {n(m.costo) !== precio && antes > 0 ? <>El costo promedio del artículo pasa de {bs(m.costo)} a <b>{bs(nuevoCosto)}</b>.</> : null}{antes === 0 && n(m.costo) !== precio ? <>El costo del artículo pasa a <b>{bs(precio)}</b>.</> : null}</p>}
     <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={ocup} onClick={guardar}>{ocup ? "Ingresando…" : "Ingresar al almacén"}</button>
@@ -72,7 +75,20 @@ export function Almacenes({ A, M, S, E = [], zonaAlmacen, recargar, pid }: any) 
         <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={ocup} onClick={mover}>{ocup ? "Moviendo…" : "Mover material"}</button></div></div>
     <div className="card tw"><h2>Material por almacén</h2>{M.length ? <table><thead><tr><th>Artículo</th>{A.map((a: any) => <th key={a.id}>{a.nombre}</th>)}<th>Total</th></tr></thead>
       <tbody>{M.map((m: any) => { const t = totalDe(S, m.id); return <tr key={m.id}><td>{m.nombre}</td>{A.map((a: any) => <td key={a.id} style={cantEn(S, m.id, a.id) ? { color: "var(--acct)", fontWeight: 600 } : { color: "var(--mute)" }}>{cantEn(S, m.id, a.id)}</td>)}<td><b>{t}</b></td></tr>; })}</tbody></table> : <Vacio>Aún no hay materiales. Créalos en Materiales y equipos.</Vacio>}</div>
-    <div className="card tw"><h2>Movimientos recientes</h2>{movs.loading ? <Cargando /> : ((movs.data as any[]) || []).length ? <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Desde</th><th>Hacia</th><th>Detalle</th></tr></thead>
-      <tbody>{((movs.data as any[]) || []).map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}</td><td>{x.tipo}</td><td>{x.materiales?.nombre}</td><td>{x.cantidad} {x.materiales?.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{x.origen?.nombre || "—"}</td><td>{x.destino?.nombre || "—"}</td><td>{x.proveedor ? "Proveedor " + x.proveedor : x.referencia || "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay movimientos.</Vacio>}</div>
+    <div className="card tw"><h2>Movimientos recientes</h2>{movs.loading ? <Cargando /> : ((movs.data as any[]) || []).length ? <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Desde</th><th>Hacia</th><th>Detalle</th><th>Factura</th></tr></thead>
+      <tbody>{((movs.data as any[]) || []).map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}</td><td>{x.tipo}</td><td>{x.materiales?.nombre}</td><td>{x.cantidad} {x.materiales?.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{x.origen?.nombre || "—"}</td><td>{x.destino?.nombre || "—"}</td><td>{x.proveedor ? "Proveedor " + x.proveedor : x.referencia || "—"}</td><td>{x.factura_path ? <button className="btn suave chico" onClick={() => abrirFactura(x.factura_path)}>Ver factura</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay movimientos.</Vacio>}</div>
   </>;
+}
+
+export async function abrirFactura(ruta: string) { const u = await urlArchivo("comprobantes", ruta); if (u) window.open(u, "_blank"); else alert("No se pudo abrir la factura."); }
+
+/** Ingresos de un material con su factura: se puede ver o adjuntar si falta. */
+export function FacturasMaterial({ m, A }: { m: any; A: any[] }) {
+  const q = useQuery(() => supabase.from("movimientos").select("id, fecha, cantidad, costo_unitario, proveedor, referencia, factura_path, almacen_destino").eq("material_id", m.id).eq("tipo", "ENTRADA").order("fecha", { ascending: false }).limit(100), [m.id]);
+  const [msg, setMsg] = useState("");
+  const adjuntar = async (x: any, f?: File | null) => { if (!f) return; setMsg(""); try { const ruta = await subirArchivo("comprobantes", m.proyecto_id, f); const { error } = await supabase.from("movimientos").update({ factura_path: ruta }).eq("id", x.id); if (error) throw new Error(error.message); q.recargar(); } catch (e: any) { setMsg(e.message); } };
+  const L: any[] = (q.data as any[]) || [];
+  return <div>{msg && <Aviso tipo="mal">{msg}</Aviso>}{q.loading ? <Cargando /> : L.length ? <table style={{ minWidth: 0 }}><thead><tr><th>Fecha</th><th>Cant.</th><th>Precio</th><th>Almacén</th><th>Factura</th></tr></thead>
+    <tbody>{L.map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}<br /><small className="mute">{x.proveedor || x.referencia || ""}</small></td><td>{x.cantidad} {m.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{A.find(a => a.id === x.almacen_destino)?.nombre || "—"}</td>
+      <td>{x.factura_path ? <button className="btn suave chico" onClick={() => abrirFactura(x.factura_path)}>Ver factura</button> : <label className="btn suave chico" style={{ cursor: "pointer" }}>Adjuntar<input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => adjuntar(x, e.target.files?.[0])} /></label>}</td></tr>)}</tbody></table> : <Vacio>Este artículo todavía no tiene ingresos registrados.</Vacio>}</div>;
 }

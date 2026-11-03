@@ -63,7 +63,7 @@ export function HistorialRed() {
 
   return <>
     <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Eventos registrados" v={H.length} /><Kpi t="Costo acumulado de la red" v={bs(costo)} /><Kpi t="Ingresos por instalaciones" v={bs(ingresos)} s="Según el precio de instalación de cada cliente" /></div>
-    <div className="grid" style={{ gridTemplateColumns: "minmax(300px, 4fr) minmax(320px, 6fr)", alignItems: "start" }}>
+    <div className="grid historial-layout">
       <div className="card"><h2>Registrar un cambio de la red{zona ? " · " + zona.nombre : ""}</h2>
         {msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
         <div className="form" style={{ gridTemplateColumns: "1fr" }}>

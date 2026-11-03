@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 28 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 29 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -168,4 +168,8 @@ select n, comprobacion, resultado, estado from (
                and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_habilitar','v_cortar')) = 2
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('registrar_movimiento_banco','conciliar_banco','aplicar_banco','ignorar_banco','registrar_pago_sistema')) = 5
               then 'OK' else 'FALTA: ejecuta 22_banco.sql' end
+  union all
+  select 29, 'Inversores en dólares o bolivianos y comprobante (archivo 23)',
+         (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name in ('moneda','monto_original','tipo_cambio','interes_modo','interes_monto','interes_base','comprobante_path'))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name in ('moneda','monto_original','tipo_cambio','interes_modo','interes_monto','interes_base','comprobante_path')) = 7 then 'OK' else 'FALTA: ejecuta 23_inversores_moneda.sql' end
 ) r order by n;

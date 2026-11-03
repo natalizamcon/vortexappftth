@@ -245,3 +245,12 @@ git push origin main
 3. Se agregó `netlify/functions/banco-webhook.mjs` (hay que subir la carpeta `netlify`).
 4. El menú lateral muestra "Vortex · versión 3.9" al pie (y la pantalla de ingreso también): sirve para comprobar que se publicó esta versión.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 28 filas en OK.
+
+### Novedades de la 3.10 · Inversores en dólares, interés por % o por monto, comprobante y arreglo del mapa
+1. En Supabase → SQL Editor ejecuta **`sql/23_inversores_moneda.sql`** (después del 22; no borra datos).
+2. **Finanzas → Inversores y fondos → Inversores → Nuevo inversor:**
+   - Eliges **Bolivianos o Dólares**. En dólares pones el **tipo de cambio que se usó** y te muestra el equivalente en Bs.
+   - El interés se puede poner **por porcentaje** (por mes o por año) o **por monto** (por mes, por año o en total del plazo). Te muestra al instante el equivalente en % mensual y anual, cuánto pagarás por mes, el interés total y el total a devolver.
+   - Puedes **subir el comprobante** (foto o PDF) de lo que invirtió; en la lista aparece "Ver comprobante".
+3. **Mapa:** se corrigió el bloqueo de OpenStreetMap ("Access blocked"): los mapas de calle vuelven a verse. Si algún día OpenStreetMap limita el uso, se puede cambiar de proveedor con la variable de Netlify `VITE_MAPA_CALLE_URL` (ver la guía del celular).
+4. `sql/3_verificar_instalacion.sql` ahora tiene 29 filas en OK.

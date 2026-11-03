@@ -14,8 +14,10 @@ export const latDe = (y: number) => { const k = Math.PI - 2 * Math.PI * y; retur
 /** Qué azulejo (columna, fila) cubre un punto en un nivel de zoom. */
 export const azulejoDe = (lat: number, lng: number, z: number) => [Math.floor(nx(lng) * 2 ** z), Math.floor(ny(lat) * 2 ** z)] as [number, number];
 
+/** Si algún día OpenStreetMap limita el uso, se puede poner otro proveedor de mapas sin tocar el código: en Netlify crea la variable VITE_MAPA_CALLE_URL con una dirección como https://ejemplo.com/{z}/{x}/{y}.png */
+const URL_CALLE: string = ((import.meta as any).env?.VITE_MAPA_CALLE_URL as string) || "";
 const BASES: Record<string, { url: (z: number, x: number, y: number) => string; texto: string }> = {
-  calle: { url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, texto: "© OpenStreetMap" },
+  calle: { url: (z, x, y) => (URL_CALLE ? URL_CALLE.replace("{z}", String(z)).replace("{x}", String(x)).replace("{y}", String(y)) : `https://tile.openstreetmap.org/${z}/${x}/${y}.png`), texto: URL_CALLE ? "Mapa base" : "© OpenStreetMap" },
   satelite: { url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, texto: "Imagen © Esri" },
 };
 
@@ -84,7 +86,7 @@ export function MapaBase({ puntos, lineas, base = "calle", alto = 520, ajustar =
 
   return <div ref={caja} className="mapa-base" role="application" aria-label="Mapa" style={{ position: "relative", height: alto, overflow: "hidden", background: "#dfe3ea", touchAction: "none", cursor: "grab", userSelect: "none", borderRadius: 10 }}
     onPointerDown={abajo} onPointerMove={mueve} onPointerUp={arriba} onPointerCancel={arriba} onDoubleClick={e => { const r = caja.current!.getBoundingClientRect(); zoomEn(1, e.clientX - r.left, e.clientY - r.top); }}>
-    {azulejos.map(t => <img key={t.k} src={t.src} alt="" draggable={false} referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.visibility = "hidden"; }} style={{ position: "absolute", left: t.left, top: t.top, width: T, height: T, pointerEvents: "none" }} />)}
+    {azulejos.map(t => <img key={t.k} src={t.src} alt="" draggable={false} onError={e => { e.currentTarget.style.visibility = "hidden"; }} style={{ position: "absolute", left: t.left, top: t.top, width: T, height: T, pointerEvents: "none" }} />)}
     <svg width={tam.w} height={tam.h} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
       {lineas.map(l => {
         const ps = l.coords.map(c => aPx(c[0], c[1])); if (!ps.length) return null;

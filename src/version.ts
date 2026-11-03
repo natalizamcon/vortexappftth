@@ -1,2 +1,2 @@
 /** Versión de la app: se muestra en el menú lateral para saber cuál está publicada. */
-export const VERSION = "3.9";
+export const VERSION = "3.10";

@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 
-export type PuntoMapa = { id: string; lat: number; lng: number; color: string; radio?: number; titulo: string; detalle?: ReactNode; capa: string };
+export type PuntoMapa = { id: string; lat: number; lng: number; color: string; radio?: number; borde?: string; titulo: string; detalle?: ReactNode; capa: string };
 export type LineaMapa = { id: string; coords: [number, number][]; color: string; ancho?: number; titulo: string; detalle?: ReactNode; capa: string; poligono?: boolean };
 type Vista = { x: number; y: number; z: number };
 
@@ -98,7 +98,7 @@ export function MapaBase({ puntos, lineas, base = "calle", alto = 520, ajustar =
       })}
     </svg>
     {ptsVis.map(({ p, xy }) => { const r = p.radio || 7; return <div key={p.id} className="mapa-punto" data-id={p.id} data-capa={p.capa} title={p.titulo} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setSel({ tipo: "p", id: p.id, px: xy[0], py: xy[1] }); }}
-      style={{ position: "absolute", left: xy[0] - r, top: xy[1] - r, width: r * 2, height: r * 2, borderRadius: "50%", background: p.color, border: "2px solid #fff", boxShadow: "0 0 0 1px #0004", cursor: "pointer" }} />; })}
+      style={{ position: "absolute", left: xy[0] - r, top: xy[1] - r, width: r * 2, height: r * 2, borderRadius: "50%", background: p.color, border: `${p.borde ? 3 : 2}px solid ${p.borde || "#fff"}`, boxShadow: "0 0 0 1px #0004", cursor: "pointer" }} />; })}
     {usuario && (() => { const [px, py] = aPx(usuario.lat, usuario.lng); return visible(px, py) ? <div title="Tu ubicación" style={{ position: "absolute", left: px - 9, top: py - 9, width: 18, height: 18, borderRadius: "50%", background: "#1a73e8", border: "3px solid #fff", boxShadow: "0 0 0 2px #1a73e855" }} /> : null; })()}
     {marca && (() => { const [px, py] = aPx(marca.lat, marca.lng); return visible(px, py) ? <div title="Punto elegido" style={{ position: "absolute", left: px - 8, top: py - 8, width: 16, height: 16, borderRadius: 3, background: "#e11d48", border: "2px solid #fff", transform: "rotate(45deg)" }} /> : null; })()}
     {tarjeta && sel && <div onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} style={{ position: "absolute", left: Math.max(8, Math.min(tam.w - 268, sel.px - 130)), top: Math.max(8, Math.min(tam.h - 150, sel.py - 130)), width: 260, background: "#fff", borderRadius: 10, boxShadow: "0 4px 16px #0004", padding: 10, cursor: "default", fontSize: 13, maxHeight: 220, overflow: "auto" }}>

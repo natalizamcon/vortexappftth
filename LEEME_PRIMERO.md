@@ -265,3 +265,12 @@ git push origin main
 6. **Ubicación precisa en las hojas y en "📍 Usar mi ubicación":** el celular ya no se queda con la primera lectura; sigue midiendo hasta unos 25 segundos y se queda con la más exacta (se detiene sola cuando llega a unos 12 m). Se ve "±8 m · precisa" y, si la precisión es baja (más de 50 m), avisa que salgas a la calle y toques "Volver a medir". Lo que escribas a mano en el GPS nunca se pisa.
 7. **Pagos de varios meses:** en Clientes → Pagos hay **"¿Cuántos meses paga?"** (1, 2, 3, 6, **Año entero (12)** u otra cantidad) y **"Pagan desde el mes"**. Calcula solo el monto (salta los meses ya pagados), muestra de qué mes a qué mes cubre y deja una nota en observaciones. Se puede cambiar el monto a mano.
 
+### Novedades de la 3.12 · Instalaciones nuevas en el mapa y eliminar clientes (solo administrador principal)
+1. En Supabase → SQL Editor ejecuta **`sql/25_eliminar_cliente.sql`** (después del 24; no borra nada por sí solo).
+2. **Mapa (Red → Mapa):**
+   - Las instalaciones nuevas aparecen **solas**: el mapa se actualiza cada minuto y cada vez que vuelves a la pantalla (también hay botón **🔄 Actualizar**). No pierde el zoom ni tu posición.
+   - Las instaladas en los **últimos 30 días** se ven con un **anillo naranja** y más grandes. Al tocarlas muestran dirección, teléfono, plan, NAP/puerto y fecha de instalación.
+   - Si un cliente se instaló **sin coordenadas**, aparece en **"Clientes sin ubicación"**: tocas **Ubicar en el mapa** y marcas su casa con un toque, o **Estoy aquí (usar mi GPS)** si estás frente a ella.
+3. **Eliminar clientes:** en la ficha de cada cliente, abajo, el botón **🗑 Eliminar este cliente…**. **Solo lo ve y lo puede usar el administrador principal** (la base de datos también lo exige; un rol personalizado, aunque tenga permisos de administrador, no puede). Muestra qué se perdería y pide escribir el código del cliente. Al eliminar: el puerto de la NAP queda libre, los equipos con serie vuelven al almacén y los movimientos del banco ligados vuelven a "por revisar". Queda un registro de lo eliminado. Para clientes que se fueron de verdad, usa **Dar de baja**, que conserva el historial.
+4. `sql/3_verificar_instalacion.sql` ahora tiene 31 filas en OK.
+

@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 30 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 31 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -179,4 +179,8 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name = 'proposito') = 1
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('resumen_eliminacion','eliminar_definitivo')) = 2
               then 'OK' else 'FALTA: ejecuta 24_eliminar_y_propositos.sql' end
+  union all
+  select 31, 'Eliminar clientes, solo el administrador principal (archivo 25)',
+         (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('es_admin_principal','resumen_eliminacion_cliente','eliminar_cliente'))::text,
+         case when (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('es_admin_principal','resumen_eliminacion_cliente','eliminar_cliente')) = 3 then 'OK' else 'FALTA: ejecuta 25_eliminar_cliente.sql' end
 ) r order by n;

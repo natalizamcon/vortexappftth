@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase, urlArchivo } from "../lib/supabase";
+import { EliminarCliente } from "./ClientesEliminar";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Estado, Modal, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
@@ -54,6 +55,7 @@ export function ListaClientes({ filtroInicial }: { filtroInicial?: string }) {
 function Dato({ l, v }: { l: string; v: any }) { return <><dt>{l}</dt><dd>{v === null || v === undefined || v === "" ? "—" : v}</dd></>; }
 
 function Ficha({ c, cuenta, comp, tecnico, verCobranza, onClose, onCambio, onPago, onHist, onBaja }: any) {
+  const { perfil: yo } = useApp(), soyDueno = yo?.rol === "admin" && (yo?.rol_clave || "admin") === "admin", [elim, setElim] = useState(false);
   const [conf, setConf] = useState(!!c.problematico), [nota, setNota] = useState(c.motivo_problematico || ""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
   const k = cr(c.clientes_credenciales), cc = comportamiento(comp, conf), hoja = useQuery(() => supabase.from("instalaciones").select("formulario_path, fecha").eq("cliente_id", c.id).order("fecha", { ascending: false }).limit(1), [c.id]), rutaHoja = ((hoja.data as any[]) || [])[0]?.formulario_path;
   const guardar = async () => {
@@ -77,6 +79,8 @@ function Ficha({ c, cuenta, comp, tecnico, verCobranza, onClose, onCambio, onPag
       <Dato l="Comportamiento" v={comp && n0(comp.cargos_vencidos) ? `${comp.a_tiempo} de ${comp.cargos_vencidos} meses pagados a tiempo${n0(comp.tarde) ? `, ${comp.tarde} tarde` : ""}${n0(comp.impagos) ? `, ${comp.impagos} sin pagar` : ""}` : "Aún sin meses vencidos"} />
       {c.no_cortar && <Dato l="No cortar" v={"Sí" + (c.no_cortar_hasta ? " hasta " + c.no_cortar_hasta : "") + (c.motivo_estado ? " · " + c.motivo_estado : "")} />}{c.estado === "SUSPENDIDO" && <Dato l="Suspendido por" v={c.motivo_estado} />}</dl></>}
     <div className="fila" style={{ marginTop: 14 }}>{verCobranza && cuenta && c.estado !== "BAJA" && <button className="btn" onClick={onPago}>Registrar pago</button>}{verCobranza && cuenta && <button className="btn suave" onClick={onHist}>Historial de pagos</button>}{c.estado !== "BAJA" && <button className="btn suave" onClick={onBaja}>Dar de baja</button>}</div>
+    {soyDueno && <div style={{ marginTop: 20, paddingTop: 10, borderTop: "1px dashed var(--bad)" }}><small className="mute">Solo el administrador principal ve esta opción.</small><div style={{ marginTop: 6 }}><button className="btn suave" style={{ color: "var(--bad)" }} onClick={() => setElim(true)}>🗑 Eliminar este cliente…</button></div></div>}
+    {elim && <EliminarCliente c={c} onClose={() => setElim(false)} onListo={() => { setElim(false); onCambio(); onClose(); }} />}
   </Drawer>;
 }
 const n0 = (x: any) => Number(x) || 0;

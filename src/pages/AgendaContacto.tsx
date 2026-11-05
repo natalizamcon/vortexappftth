@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
-import { Aviso, Campo, Cargando, Vacio, useQuery } from "../lib/ui";
+import { Aviso, Campo, Cargando, useQuery } from "../lib/ui";
 import { Drawer } from "../lib/drawer";
 import { BotonGPS } from "../lib/BotonGPS";
-import { ATAJOS, Atajo, COLOR_ESTADO, ESTADOS, ICONO_REC, RESULTADOS, TIPOS_REC, aLocalInput, deLocalInput, etiquetaFecha, fechaAtajo, linkCalendario, linkLlamar, linkMapa, linkWhatsApp } from "../lib/agenda";
+import { ATAJOS, Atajo, COLOR_ESTADO, ESTADOS, ICONO_REC, RESULTADOS, TIPOS_REC, aLocalInput, armarHistorial, deLocalInput, etiquetaFecha, fechaAtajo, linkCalendario, linkLlamar, linkMapa, linkWhatsApp } from "../lib/agenda";
+import { LineaTiempo } from "./AgendaHistorial";
 
 export const cambioAgenda = () => window.dispatchEvent(new Event("agenda-cambio"));
+/** Deja constancia en el historial de un cambio (estado, datos, a quién se compartió). Si falla, no estorba lo que se estaba haciendo. */
+export const registrarEvento = (contacto_id: string, tipo: "Estado" | "Datos" | "Compartido" | "Recordatorio", detalle: string) => { try { Promise.resolve(supabase.from("agenda_eventos").insert({ contacto_id, tipo, detalle })).then(() => cambioAgenda(), () => {}); } catch { /* sin historial de cambios todavía */ } };
+const ETIQ_CAMPO: Record<string, string> = { nombre: "Nombre", telefono: "Teléfono", telefono2: "Otro teléfono", cargo: "Cargo", organizacion: "Organización", zona: "Zona", ubicacion: "Ubicación", notas: "Notas" };
+const corto = (v: any) => { const t = String(v ?? "").replace(/\s+/g, " ").trim(); return t ? (t.length > 40 ? t.slice(0, 40) + "…" : t) : "(vacío)"; };
 const vacio = (c: any) => ({ nombre: c?.nombre || "", telefono: c?.telefono || "", telefono2: c?.telefono2 || "", cargo: c?.cargo || "", organizacion: c?.organizacion || "", zona: c?.zona || "", ubicacion: c?.ubicacion || "", lat: c?.lat ?? null, lng: c?.lng ?? null, estado: c?.estado || "Nuevo", notas: c?.notas || "" });
 
 /** Anotar o corregir un dirigente. Lo único obligatorio es el nombre; todo lo demás se puede completar después. */
@@ -19,6 +24,11 @@ export function FormContacto({ contacto, zonasConocidas, onClose, onListo }: { c
     const q = contacto ? supabase.from("agenda_contactos").update(fila).eq("id", contacto.id).select("id").single() : supabase.from("agenda_contactos").insert(fila).select("id").single();
     const { data, error } = await q; setOcup(false);
     if (error) return setMsg(/relation|does not exist|schema cache/i.test(error.message) ? "Falta actualizar la base de datos: en Supabase corre el archivo 27_agenda.sql y recarga la página." : error.message);
+    if (contacto) {
+      const dif = Object.keys(ETIQ_CAMPO).filter(k => (contacto[k] || null) !== ((fila as any)[k] || null)).map(k => `${ETIQ_CAMPO[k]}: ${corto(contacto[k])} → ${corto((fila as any)[k])}`);
+      if ((contacto.lat ?? null) !== (fila.lat ?? null) || (contacto.lng ?? null) !== (fila.lng ?? null)) dif.push("GPS actualizado");
+      if (dif.length) registrarEvento(contacto.id, "Datos", dif.join("\n")); if (contacto.estado !== fila.estado) registrarEvento(contacto.id, "Estado", `De ${contacto.estado} a ${fila.estado}`);
+    }
     cambioAgenda(); onListo((data as any)?.id || contacto?.id, otro);
     if (otro) setF(vacio(null));
   };
@@ -46,13 +56,16 @@ export function FichaContacto({ c, personas, comp, onClose, onCambio, zonasConoc
   const { perfil } = useApp(), soyDueno = c.creado_por === perfil?.id, miAcceso = comp.find(x => x.contacto_id === c.id && x.usuario_id === perfil?.id), puedeEditar = soyDueno || !!miAcceso?.puede_editar;
   const nombreDe = (id: string) => personas.find(p => p.id === id)?.nombre || personas.find(p => p.id === id)?.email || "otra cuenta";
   const llam = useQuery(() => supabase.from("agenda_llamadas").select("*").eq("contacto_id", c.id).order("fecha", { ascending: false }).limit(100), [c.id]);
+  const evs = useQuery(() => supabase.from("agenda_eventos").select("*").eq("contacto_id", c.id).order("creado_en", { ascending: false }).limit(200), [c.id]);
   const recs = useQuery(() => supabase.from("agenda_recordatorios").select("*").eq("contacto_id", c.id).order("fecha_hora", { ascending: true }).limit(100), [c.id]);
   const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [editando, setEditando] = useState(false), [ocup, setOcup] = useState(false);
   const [res, setRes] = useState<string>("Contestó"), [nota, setNota] = useState(""), [tras, setTras] = useState(false);
   const [r, setR] = useState({ tipo: "Llamar", titulo: "", fecha: aLocalInput(fechaAtajo("manana")), lugar: c.ubicacion || "", nota: "" }), [verRec, setVerRec] = useState(false);
   const [per, setPer] = useState(""), [permiso, setPermiso] = useState("ver");
   const L: any[] = (llam.data as any[]) || [], R: any[] = (recs.data as any[]) || [], pend = R.filter(x => !x.hecho), hechos = R.filter(x => x.hecho);
-  const recargar = () => { llam.recargar(); recs.recargar(); onCambio(); cambioAgenda(); };
+  const [catH, setCatH] = useState("todo");
+  const hitos = useMemo(() => armarHistorial({ contactos: [c], llamadas: L, recordatorios: R, eventos: evs.error ? [] : ((evs.data as any[]) || []) }), [c, llam.data, recs.data, evs.data, evs.error]);
+  const recargar = () => { llam.recargar(); recs.recargar(); evs.recargar(); onCambio(); cambioAgenda(); };
   const err = (e: any) => setMsg(e?.message || String(e));
 
   const guardarLlamada = async () => { setMsg(""); setOk(""); setOcup(true); const { error } = await supabase.from("agenda_llamadas").insert({ contacto_id: c.id, resultado: res, nota: nota.trim() || null }); setOcup(false); if (error) return err(error); setOk("Llamada anotada."); setNota(""); setTras(true); recargar(); if (c.estado === "Nuevo" && res === "Contestó") supabase.from("agenda_contactos").update({ estado: "Contactado" }).eq("id", c.id).then(() => onCambio()); };
@@ -64,12 +77,12 @@ export function FichaContacto({ c, personas, comp, onClose, onCambio, zonasConoc
   };
   const hecho = async (x: any, v: boolean) => { const { error } = await supabase.from("agenda_recordatorios").update({ hecho: v, hecho_en: v ? new Date().toISOString() : null }).eq("id", x.id); if (error) err(error); else recargar(); };
   const borrarRec = async (x: any) => { if (!confirm("¿Borrar este recordatorio?")) return; const { error } = await supabase.from("agenda_recordatorios").delete().eq("id", x.id); if (error) err(error); else recargar(); };
-  const cambiarEstado = async (estado: string) => { const { error } = await supabase.from("agenda_contactos").update({ estado }).eq("id", c.id); if (error) err(error); else onCambio(); };
+  const cambiarEstado = async (estado: string) => { const antes = c.estado; const { error } = await supabase.from("agenda_contactos").update({ estado }).eq("id", c.id); if (error) err(error); else { registrarEvento(c.id, "Estado", `De ${antes} a ${estado}`); onCambio(); setTimeout(() => evs.recargar(), 600); } };
   const eliminar = async () => { if (!confirm(`¿Eliminar a "${c.nombre}" con todas sus llamadas y recordatorios? No se puede deshacer.`)) return; const { error } = await supabase.from("agenda_contactos").delete().eq("id", c.id); if (error) err(error); else { cambioAgenda(); onCambio(); onClose(); } };
   const compartidos = comp.filter(x => x.contacto_id === c.id), disponibles = personas.filter(p => !compartidos.some(x => x.usuario_id === p.id));
-  const compartir = async () => { if (!per) return; setMsg(""); const { error } = await supabase.from("agenda_compartido").insert({ contacto_id: c.id, usuario_id: per, puede_editar: permiso === "editar" }); if (error) return err(error); setPer(""); setOk("Compartido."); onCambio(); };
-  const cambiarPermiso = async (x: any, v: boolean) => { const { error } = await supabase.from("agenda_compartido").update({ puede_editar: v }).eq("contacto_id", x.contacto_id).eq("usuario_id", x.usuario_id); if (error) err(error); else onCambio(); };
-  const quitarComp = async (x: any) => { const yo = x.usuario_id === perfil?.id; if (!confirm(yo ? "¿Dejar de ver este contacto?" : "¿Dejar de compartir con esta persona?")) return; const { error } = await supabase.from("agenda_compartido").delete().eq("contacto_id", x.contacto_id).eq("usuario_id", x.usuario_id); if (error) err(error); else { onCambio(); if (yo) onClose(); } };
+  const compartir = async () => { if (!per) return; setMsg(""); const { error } = await supabase.from("agenda_compartido").insert({ contacto_id: c.id, usuario_id: per, puede_editar: permiso === "editar" }); if (error) return err(error); registrarEvento(c.id, "Compartido", `Compartido con ${nombreDe(per)} (${permiso === "editar" ? "puede ver y anotar" : "solo ver"})`); setPer(""); setOk("Compartido."); onCambio(); setTimeout(() => evs.recargar(), 600); };
+  const cambiarPermiso = async (x: any, v: boolean) => { const { error } = await supabase.from("agenda_compartido").update({ puede_editar: v }).eq("contacto_id", x.contacto_id).eq("usuario_id", x.usuario_id); if (error) err(error); else { registrarEvento(c.id, "Compartido", `${nombreDe(x.usuario_id)} ahora ${v ? "puede ver y anotar" : "solo puede ver"}`); onCambio(); setTimeout(() => evs.recargar(), 600); } };
+  const quitarComp = async (x: any) => { const yo = x.usuario_id === perfil?.id; if (!confirm(yo ? "¿Dejar de ver este contacto?" : "¿Dejar de compartir con esta persona?")) return; const { error } = await supabase.from("agenda_compartido").delete().eq("contacto_id", x.contacto_id).eq("usuario_id", x.usuario_id); if (error) err(error); else { if (!yo) registrarEvento(c.id, "Compartido", `Dejó de compartirse con ${nombreDe(x.usuario_id)}`); onCambio(); if (yo) onClose(); else setTimeout(() => evs.recargar(), 600); } };
 
   const tel = linkLlamar(c.telefono), wa = linkWhatsApp(c.telefono), mapa = linkMapa(c);
   if (editando) return <FormContacto contacto={c} zonasConocidas={zonasConocidas} onClose={() => setEditando(false)} onListo={() => { setEditando(false); onCambio(); }} />;
@@ -98,7 +111,10 @@ export function FichaContacto({ c, personas, comp, onClose, onCambio, zonasConoc
       {recs.loading ? <Cargando /> : pend.length ? pend.map(x => <FilaRec key={x.id} x={x} puedeEditar={puedeEditar} onHecho={() => hecho(x, true)} onBorrar={() => borrarRec(x)} />) : <p className="mute" style={{ margin: "6px 0 0" }}>Sin recordatorios pendientes.</p>}
       {hechos.length > 0 && <details style={{ marginTop: 6 }}><summary className="mute" style={{ cursor: "pointer" }}>Hechos ({hechos.length})</summary>{hechos.map(x => <FilaRec key={x.id} x={x} hecho puedeEditar={puedeEditar} onHecho={() => hecho(x, false)} onBorrar={() => borrarRec(x)} />)}</details>}</div>
 
-    <div className="card" style={{ margin: "10px 0" }}><h3 style={{ margin: "0 0 6px" }}>Historial de llamadas ({L.length})</h3>{llam.loading ? <Cargando /> : L.length ? L.map(x => <div key={x.id} style={{ borderTop: "1px solid var(--line)", padding: "5px 0" }}><b>{x.resultado}</b> <small className="mute">{etiquetaFecha(x.fecha)}{x.creado_por !== perfil?.id ? " · " + nombreDe(x.creado_por) : ""}</small>{x.nota && <div>{x.nota}</div>}</div>) : <p className="mute" style={{ margin: 0 }}>Todavía no hay llamadas anotadas.</p>}</div>
+    <div className="card" style={{ margin: "10px 0" }}><h3 style={{ margin: "0 0 6px" }}>🕘 Historial completo ({hitos.length})</h3>
+      <div className="fila" style={{ gap: 4, marginBottom: 4 }}>{[["todo", "Todo"], ["llamadas", "Llamadas"], ["recordatorios", "Recordatorios"], ["cambios", "Cambios"]].map(([k, l]) => <button key={k} className={"btn chico " + (catH === k ? "" : "suave")} onClick={() => setCatH(k)}>{l}</button>)}</div>
+      {llam.loading || recs.loading ? <Cargando /> : <LineaTiempo key={catH} hitos={hitos.filter(h => catH === "todo" || h.categoria === catH)} nombreDe={nombreDe} perfilId={perfil?.id} limite={30} />}
+      {evs.error && <p className="mute" style={{ margin: "6px 0 0" }}>Para ver también los cambios de estado y de datos, corre 28_agenda_historial.sql en Supabase.</p>}</div>
 
     <div className="card" style={{ margin: "10px 0" }}><h3 style={{ margin: "0 0 6px" }}>👥 Quién puede ver este dirigente</h3>
       <p className="mute" style={{ margin: "0 0 6px" }}>{soyDueno ? "Es privado: solo lo ves tú y las personas que elijas aquí. Nadie más, ni el administrador." : "No puedes cambiar quién lo ve: lo decide quien lo anotó."}</p>

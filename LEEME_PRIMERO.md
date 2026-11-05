@@ -294,3 +294,10 @@ git push origin main
 7. **Privacidad:** cada dirigente es privado de quien lo anotó. Solo lo ven las personas con las que él lo comparta, "solo para ver" o "para ver y anotar". Lo exige la base de datos: ni el administrador ve lo que otra cuenta no le compartió. Quien recibe uno compartido puede dejar de verlo cuando quiera.
 8. `sql/3_verificar_instalacion.sql` ahora tiene 33 filas en OK.
 
+### Novedades de la 3.15 · Calendario e historial completo en la Agenda
+1. En Supabase → SQL Editor ejecuta **`sql/28_agenda_historial.sql`** (después del 27; no borra nada). Si no lo corres, la Agenda funciona igual: el historial solo mostrará llamadas y recordatorios.
+2. **Calendario** (pestaña nueva de la Agenda): vista del mes con los días que tienen actividades programadas marcados con puntos de color (azul = llamar, morado = viaje o reunión, gris = otro, gris claro = hecha). Al elegir un día, **al lado** se ve lo programado para esa fecha, con Hecho ✓, Posponer, llamar, cómo llegar y 📅; si no hay nada, lo dice y ofrece **➕ Agregar actividad** (tipo, dirigente, hora y lugar). También se ven las llamadas anotadas ese día. En el celular el calendario va arriba y las actividades debajo.
+3. **Historial completo de cada dirigente** (en su ficha): una línea de tiempo con cuándo se anotó, todas las llamadas, los recordatorios (creados y hechos) y los cambios (de estado, de datos, a quién se compartió), con filtros Todo / Llamadas / Recordatorios / Cambios.
+4. **Pestaña Historial** de la Agenda: todo lo anterior de todos tus dirigentes juntos, con buscador, filtro por dirigente, por tipo y por fechas.
+5. `sql/3_verificar_instalacion.sql` ahora tiene 34 filas en OK.
+

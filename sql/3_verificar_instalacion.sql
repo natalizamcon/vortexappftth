@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 33 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 34 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -194,4 +194,8 @@ select n, comprobacion, resultado, estado from (
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('agenda_contactos','agenda_llamadas','agenda_recordatorios','agenda_compartido')) = 4
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('agenda_personas','agenda_puede_ver','agenda_puede_editar','agenda_es_dueno')) = 4
               then 'OK' else 'FALTA: ejecuta 27_agenda.sql' end
+  union all
+  select 34, 'Historial de la Agenda (archivo 28)',
+         (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'agenda_eventos')::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'agenda_eventos') = 1 then 'OK' else 'FALTA: ejecuta 28_agenda_historial.sql' end
 ) r order by n;

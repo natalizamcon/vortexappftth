@@ -167,3 +167,12 @@ select,input,textarea{max-width:100%}.campo{min-width:0}
 .lateral-filtros{display:none;flex-direction:column;gap:8px;margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .lateral-filtros select{width:100%}.lateral-filtros .buscador{max-width:none;flex:none;margin-left:0;order:0}
 @media(max-width:800px){.lateral-filtros{display:flex}.topbar .controles,.topbar .menu-usuario{display:none}.acciones{margin-left:auto;order:0}.topbar{flex-wrap:nowrap}}
+
+/* ---------- Agenda: calendario ---------- */
+.agenda-cal{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,1fr);gap:14px;align-items:start}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-cab{text-align:center;font-size:12px;color:var(--mute);padding:2px 0;font-weight:600}
+.cal-dia{border:1px solid var(--line);background:#fff;border-radius:10px;min-height:54px;padding:4px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;font:inherit;color:var(--ink)}
+.cal-dia:hover{background:var(--lilb)}.cal-dia.fuera{opacity:.45}.cal-dia.hoy{border:2px solid var(--acc);font-weight:700}.cal-dia.sel{background:var(--acc);color:#10142c;font-weight:700}
+.cal-puntos{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:center}.cal-puntos i{width:8px;height:8px;border-radius:50%;display:inline-block}.cal-puntos small{font-size:10px}
+@media(max-width:800px){.agenda-cal{grid-template-columns:minmax(0,1fr)}.cal-dia{min-height:46px}}

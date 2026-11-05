@@ -56,7 +56,9 @@ export const ESTADOS = ["Nuevo", "Contactado", "Reunión agendada", "Interesado"
 export const COLOR_ESTADO: Record<string, string> = { "Nuevo": "#7a8190", "Contactado": "#2b6cb0", "Reunión agendada": "#7c2bc9", "Interesado": "#c9a017", "Negociando": "#e07b1a", "Cerrado": "#1d9a5d", "Descartado": "#b0b6c2" };
 export const RESULTADOS = ["Contestó", "No contestó", "Ocupado", "Número equivocado", "Reunión acordada", "Pidió que llame después"] as const;
 export const TIPOS_REC = ["Llamar", "Viaje o reunión", "Otro"] as const;
-export const ICONO_REC: Record<string, string> = { "Llamar": "📞", "Viaje o reunión": "🚗", "Otro": "🔔" };
+/** 📲 = llamada por hacer (programada). ☎️ = llamada que ya se hizo. */
+export const ICONO_REC: Record<string, string> = { "Llamar": "📲", "Viaje o reunión": "🚗", "Otro": "🔔" };
+export const ICONO_LLAMADA: Record<string, string> = { "Contestó": "☎️", "No contestó": "📵", "Ocupado": "📵", "Número equivocado": "❌", "Reunión acordada": "🤝", "Pidió que llame después": "🔁" };
 
 /* ---------------- Calendario ---------------- */
 export const NOMBRES_MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -86,9 +88,9 @@ export type Hito = { id: string; fecha: string; categoria: "llamadas" | "recorda
 export function armarHistorial(d: { contactos: any[]; llamadas: any[]; recordatorios: any[]; eventos: any[] }, ahora = new Date()): Hito[] {
   const h: Hito[] = [];
   d.contactos.forEach(c => h.push({ id: "c" + c.id, fecha: c.creado_en, categoria: "cambios", icono: "🆕", titulo: "Dirigente anotado", detalle: [c.zona, [c.cargo, c.organizacion].filter(Boolean).join(" · ")].filter(Boolean).join(" — ") || undefined, por: c.creado_por, contacto_id: c.id }));
-  d.llamadas.forEach(l => h.push({ id: "l" + l.id, fecha: l.fecha, categoria: "llamadas", icono: l.resultado === "Contestó" || l.resultado === "Reunión acordada" ? "📞" : l.resultado === "No contestó" || l.resultado === "Ocupado" ? "📵" : "📞", titulo: "Llamada: " + l.resultado, detalle: l.nota || undefined, por: l.creado_por, contacto_id: l.contacto_id }));
+  d.llamadas.forEach(l => h.push({ id: "l" + l.id, fecha: l.fecha, categoria: "llamadas", icono: ICONO_LLAMADA[l.resultado] || "☎️", titulo: "Llamada hecha: " + l.resultado, detalle: l.nota || undefined, por: l.creado_por, contacto_id: l.contacto_id }));
   d.recordatorios.filter(r => r.contacto_id).forEach(r => {
-    h.push({ id: "r" + r.id, fecha: r.creado_en, categoria: "recordatorios", icono: ICONO_REC[r.tipo] || "🔔", titulo: "Recordatorio: " + r.titulo, detalle: `para ${etiquetaFecha(r.fecha_hora, ahora)}${r.lugar ? " · " + r.lugar : ""}`, por: r.creado_por, contacto_id: r.contacto_id });
+    h.push({ id: "r" + r.id, fecha: r.creado_en, categoria: "recordatorios", icono: ICONO_REC[r.tipo] || "🔔", titulo: (r.tipo === "Llamar" ? "Llamada programada: " : "Recordatorio: ") + r.titulo, detalle: `para ${etiquetaFecha(r.fecha_hora, ahora)}${r.lugar ? " · " + r.lugar : ""}`, por: r.creado_por, contacto_id: r.contacto_id });
     if (r.hecho && r.hecho_en) h.push({ id: "h" + r.id, fecha: r.hecho_en, categoria: "recordatorios", icono: "✅", titulo: "Hecho: " + r.titulo, por: r.creado_por, contacto_id: r.contacto_id });
   });
   d.eventos.forEach(e => h.push({ id: "e" + e.id, fecha: e.creado_en, categoria: e.tipo === "Recordatorio" ? "recordatorios" : "cambios", icono: e.tipo === "Estado" ? "🔄" : e.tipo === "Compartido" ? "👥" : e.tipo === "Recordatorio" ? "⏩" : "✏️", titulo: e.tipo === "Estado" ? "Cambió el estado" : e.tipo === "Compartido" ? "Compartir" : e.tipo === "Recordatorio" ? "Recordatorio movido" : "Datos corregidos", detalle: e.detalle || undefined, por: e.creado_por, contacto_id: e.contacto_id }));

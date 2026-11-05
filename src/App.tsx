@@ -19,10 +19,11 @@ import { BuscadorGlobal } from "./pages/BuscadorGlobal";
 import { VERSION } from "./version";
 import { CambiarClave } from "./pages/CambiarClave";
 import Agenda, { ContadorAgenda } from "./pages/Agenda";
+import { AvisosAgenda } from "./pages/AvisosAgenda";
 
 const RUTAS: [string, string, string | null][] = [
-  ["dashboard", "Dashboard", null], ["agenda", "Agenda", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
-  ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
+  ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
+  ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["agenda", "Agenda", null], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
 ];
 const MODULO_RUTA: Record<string, string> = { red: "red", clientes: "clientes", cobranzas: "cobranzas", servicios: "instalaciones", campo: "instalaciones", inventario: "inventario", finanzas: "finanzas", formularios: "formularios", reportes: "reportes" };
 const ICONOS: Record<string, string> = { dashboard: "🏠", agenda: "📒", red: "🌐", clientes: "👥", servicios: "🛠️", inventario: "📦", finanzas: "💰", formularios: "🖨️", alertas: "🔔", reportes: "📊", configuracion: "⚙️" };
@@ -63,6 +64,7 @@ export default function App() {
       <nav>{items.map(([k, l]) => <a key={k} href={"#/" + k} className={actual === k ? "on" : ""} onClick={() => setMenu(false)}><span className="ico">{ICONOS[k]}</span><span>{l}</span>{k === "alertas" && <ContadorAlertas />}{k === "agenda" && <ContadorAgenda />}</a>)}</nav>
       <div className="lateral-pie"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div className="fila" style={{ marginTop: 8 }}><button className="btn suave chico" onClick={() => { setMenu(false); setClaveAbierta(true); }}>🔑 Cambiar contraseña</button><button className="btn suave chico" onClick={salir}>Salir</button></div><div className="mute" style={{ marginTop: 8, fontSize: 11 }}>Vortex · versión {VERSION}</div></div>
     </aside>
+    <AvisosAgenda />
     <div className="topbar">
       <button className="hamb" onClick={() => setMenu(true)} aria-label="Abrir el menú" aria-expanded={menu}><span /><span /><span /></button>
       <img className="logo-mini" src="/logo.png" alt="Vortex" /><b className="seccion">{seccion}</b>

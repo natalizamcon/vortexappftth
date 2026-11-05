@@ -301,3 +301,16 @@ git push origin main
 4. **Pestaña Historial** de la Agenda: todo lo anterior de todos tus dirigentes juntos, con buscador, filtro por dirigente, por tipo y por fechas.
 5. `sql/3_verificar_instalacion.sql` ahora tiene 34 filas en OK.
 
+### Novedades de la 3.16 · Agenda: calendario y "Hoy" juntos, íconos claros y lugar en el menú
+1. **Una sola pantalla:** la pestaña **"Calendario y hoy"** trae arriba el calendario con las actividades del día elegido al lado, y **debajo** "Hoy y lo que viene" (atrasados, hoy, próximos 7 días y más adelante). Las pestañas quedan: Calendario y hoy, Dirigentes e Historial.
+2. **Íconos distintos:** 📲 = llamada **por hacer** (programada); ☎️ = llamada **que ya se hizo** (📵 no contestó, 🤝 reunión acordada, 🔁 pidió que llame después, ❌ número equivocado). En el historial los títulos dicen "Llamada programada" y "Llamada hecha".
+3. **Menú:** la **Agenda** ahora está justo encima del **Centro de alertas**.
+4. No hay SQL nuevo en esta versión.
+
+### Novedades de la 3.17 · Avisos con sonido y notificación para los recordatorios de la Agenda
+1. **Cuando llega la hora de un recordatorio tuyo**, la app **suena** (tres pitidos), **vibra** (en el celular), muestra un **cartel** en cualquier pantalla de Vortex y, si lo permites, una **notificación del sistema**. El título de la pestaña muestra 🔔 mientras hay avisos pendientes.
+2. El cartel trae **📞 Llamar**, **Hecho ✓**, **+10 min**, **+1 hora** y **Abrir Agenda**. Si algo atrasado vuelve a tocar (por ejemplo, lo pospusiste), vuelve a avisar; lo que ya avisó no se repite. Solo avisa lo tuyo (no lo que te compartieron), y lo atrasado más de 12 horas ya no avisa (sigue saliendo en "Atrasados").
+3. **Ajustes** en la Agenda (🔔 Avisos y sonido): botón para activar las notificaciones del celular, sonido sí/no, **cuándo avisar** (a la hora, 10 min, 30 min o 1 hora antes) y **🔊 Probar aviso**. Valen solo para ese dispositivo.
+4. **Límite importante:** funciona **mientras la app esté abierta** (aunque esté en segundo plano). Con la app cerrada o el celular bloqueado el navegador no deja correr nada, así que no puede avisar. Para eso sirve el botón **📅** de cada recordatorio (lo pasa al calendario del celular con alarma). Avisos con la app cerrada requieren "notificaciones push", que es una mejora aparte.
+5. Se actualizó `public/sw.js` (al tocar una notificación abre la Agenda). No hay SQL nuevo.
+

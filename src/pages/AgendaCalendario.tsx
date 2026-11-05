@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Atajo, COLOR_ESTADO, ICONO_REC, NOMBRES_MES, TIPOS_REC, cap, claveDia, diaYHora, fechaLarga, porDia, semanasDelMes } from "../lib/agenda";
+import { Atajo, COLOR_ESTADO, ICONO_LLAMADA, ICONO_REC, NOMBRES_MES, TIPOS_REC, cap, claveDia, diaYHora, fechaLarga, porDia, semanasDelMes } from "../lib/agenda";
 import { FilaActividad } from "./AgendaFila";
 import { cambioAgenda } from "./AgendaContacto";
 
@@ -44,6 +44,6 @@ export function Calendario({ Rtodas, C, K, L, perfilId, nombreDe, onHecho, onPos
       {pend.length === 0 && hechas.length === 0 ? <div className="card" style={{ padding: 14 }}><span className="mute">Sin actividades programadas este día.</span></div> : <>
         {pend.map(x => <FilaActividad key={x.id} x={x} C={C} K={K} perfilId={perfilId} nombreDe={nombreDe} onHecho={onHecho} onPosponer={onPosponer} onAbrir={onAbrir} />)}
         {hechas.length > 0 && <><h3 style={{ margin: "10px 0 6px" }}>Hechas ({hechas.length})</h3>{hechas.map(x => <FilaActividad key={x.id} x={x} hecha C={C} K={K} perfilId={perfilId} nombreDe={nombreDe} onHecho={onHecho} onPosponer={onPosponer} onAbrir={onAbrir} />)}</>}</>}
-      {llamadas.length > 0 && <div className="card" style={{ marginTop: 10 }}><h3 style={{ margin: "0 0 6px" }}>📞 Llamadas anotadas este día ({llamadas.length})</h3>{llamadas.map(l => { const c = C.find(x => x.id === l.contacto_id); return <div key={l.id} style={{ borderTop: "1px solid var(--line)", padding: "5px 0" }}><b>{l.resultado}</b> <small className="mute">{new Date(l.fecha).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}{l.creado_por !== perfilId ? " · " + nombreDe(l.creado_por) : ""}</small>{c && <div><small><a href="#/agenda" onClick={e => { e.preventDefault(); onAbrir(c.id); }}>{c.nombre}</a>{c.estado ? <span className="pill" style={{ marginLeft: 6, background: COLOR_ESTADO[c.estado] + "22", color: COLOR_ESTADO[c.estado] }}>{c.estado}</span> : null}</small></div>}{l.nota && <div>{l.nota}</div>}</div>; })}</div>}
+      {llamadas.length > 0 && <div className="card" style={{ marginTop: 10 }}><h3 style={{ margin: "0 0 6px" }}>☎️ Llamadas hechas este día ({llamadas.length})</h3>{llamadas.map(l => { const c = C.find(x => x.id === l.contacto_id); return <div key={l.id} style={{ borderTop: "1px solid var(--line)", padding: "5px 0" }}><b>{ICONO_LLAMADA[l.resultado] || "☎️"} {l.resultado}</b> <small className="mute">{new Date(l.fecha).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}{l.creado_por !== perfilId ? " · " + nombreDe(l.creado_por) : ""}</small>{c && <div><small><a href="#/agenda" onClick={e => { e.preventDefault(); onAbrir(c.id); }}>{c.nombre}</a>{c.estado ? <span className="pill" style={{ marginLeft: 6, background: COLOR_ESTADO[c.estado] + "22", color: COLOR_ESTADO[c.estado] }}>{c.estado}</span> : null}</small></div>}{l.nota && <div>{l.nota}</div>}</div>; })}</div>}
     </div></div>;
 }

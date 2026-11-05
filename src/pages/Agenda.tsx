@@ -7,6 +7,7 @@ import { FichaContacto, FormContacto, cambioAgenda, registrarEvento } from "./Ag
 import { FilaActividad } from "./AgendaFila";
 import { Calendario } from "./AgendaCalendario";
 import { Historial } from "./AgendaHistorial";
+import { AjustesAvisos } from "./AvisosAgenda";
 
 const aDatos = (p: any) => Promise.resolve(p).then((r: any) => r);
 
@@ -47,11 +48,14 @@ export default function Agenda() {
   return <>
     <h1>Agenda</h1>
     <p className="mute" style={{ marginTop: -6 }}>Anota a los dirigentes que vas consiguiendo: su número, zona, ubicación, tus llamadas y los recordatorios para llamar o viajar a las reuniones. <b>Es privada:</b> cada dirigente lo ves solo tú, y lo compartes únicamente con quien elijas.</p>
+    <AjustesAvisos />
     {faltaSql && <Aviso tipo="mal">⚠️ Falta activar la Agenda en la base de datos: en Supabase → SQL Editor corre <b>27_agenda.sql</b> y recarga la página.</Aviso>}
     {msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
-    <div className="fila entre"><Tabs items={[["hoy", "Hoy y lo que viene"], ["calendario", "Calendario"], ["dirigentes", `Dirigentes (${C.length})`], ["historial", "Historial"]]} valor={tab} onChange={setTab} /><span className="fila"><button className="btn suave chico" onClick={recargar} title="Ver lo más reciente">🔄 Actualizar</button><button className="btn mor" onClick={() => setNuevo(true)}>➕ Nuevo dirigente</button></span></div>
-    {tab === "hoy" && <Hoy R={R} C={C} K={K} perfilId={perfil?.id} nombreDe={nombreDe} cargando={primera} onHecho={hecho} onPosponer={posponer} onCambio={() => { recs.recargar(); cambioAgenda(); }} onAbrir={setAbierto} setMsg={setMsg} setOk={setOk} />}
-    {tab === "calendario" && (primera ? <Cargando /> : <Calendario Rtodas={Rtodas} C={C} K={K} L={L} perfilId={perfil?.id} nombreDe={nombreDe} onHecho={hecho} onPosponer={posponer} onCambio={() => { recs.recargar(); cambioAgenda(); }} onAbrir={setAbierto} setMsg={setMsg} setOk={setOk} />)}
+    <div className="fila entre"><Tabs items={[["hoy", "Calendario y hoy"], ["dirigentes", `Dirigentes (${C.length})`], ["historial", "Historial"]]} valor={tab} onChange={setTab} /><span className="fila"><button className="btn suave chico" onClick={recargar} title="Ver lo más reciente">🔄 Actualizar</button><button className="btn mor" onClick={() => setNuevo(true)}>➕ Nuevo dirigente</button></span></div>
+    {tab === "hoy" && (primera ? <Cargando /> : <>
+      <Calendario Rtodas={Rtodas} C={C} K={K} L={L} perfilId={perfil?.id} nombreDe={nombreDe} onHecho={hecho} onPosponer={posponer} onCambio={() => { recs.recargar(); cambioAgenda(); }} onAbrir={setAbierto} setMsg={setMsg} setOk={setOk} />
+      <h2 style={{ margin: "22px 0 0" }}>Hoy y lo que viene</h2>
+      <Hoy R={R} C={C} K={K} perfilId={perfil?.id} nombreDe={nombreDe} cargando={false} onHecho={hecho} onPosponer={posponer} onCambio={() => { recs.recargar(); cambioAgenda(); }} onAbrir={setAbierto} setMsg={setMsg} setOk={setOk} /></>)}
     {tab === "historial" && (primera ? <Cargando /> : <Historial C={C} L={L} Rtodas={Rtodas} E={E} nombreDe={nombreDe} perfilId={perfil?.id} onAbrir={setAbierto} sinEventos={!!eventos.error} />)}
     {tab === "dirigentes" && <Dirigentes C={C} R={R} K={K} perfilId={perfil?.id} nombreDe={nombreDe} cargando={primera} zonasConocidas={zonasConocidas} onAbrir={setAbierto} />}
     {nuevo && <FormContacto zonasConocidas={zonasConocidas} onClose={() => setNuevo(false)} onListo={(id, otro) => { recargar(); if (!otro) { setNuevo(false); setTab("dirigentes"); setAbierto(id); } else setOk("Dirigente guardado. Puedes anotar otro."); }} />}
@@ -69,7 +73,7 @@ function Hoy({ R, C, K, perfilId, nombreDe, cargando, onHecho, onPosponer, onCam
   return <div style={{ marginTop: 8 }}>
     <div className="fila" style={{ marginBottom: 10 }}><button className="btn suave" onClick={() => setGeneral(v => !v)}>{general ? "Cerrar" : "➕ Recordatorio general"}</button><span className="mute">Para algo que no es de un dirigente en particular.</span></div>
     {general && <div className="card" style={{ marginBottom: 10 }}><input style={{ width: "100%" }} placeholder="¿Qué quieres recordar?" value={g.titulo} onChange={e => setG({ ...g, titulo: e.target.value })} /><div className="fila" style={{ marginTop: 6 }}>{ATAJOS.map(([k, t]) => <button key={k} type="button" className="btn suave chico" onClick={() => setG({ ...g, fecha: aLocalInput(fechaAtajo(k as Atajo)) })}>{t}</button>)}<input type="datetime-local" value={g.fecha} onChange={e => setG({ ...g, fecha: e.target.value })} /><button className="btn chico" onClick={crearGeneral}>Guardar</button></div></div>}
-    {!R.length ? <Vacio>No tienes recordatorios pendientes. 🎉 Entra a un dirigente y toca "Nuevo" en Recordatorios, o anota una llamada y elige cuándo volver a llamar. También puedes programar actividades en el <b>Calendario</b>.</Vacio> : <>
+    {!R.length ? <Vacio>No tienes recordatorios pendientes. 🎉 Entra a un dirigente y toca "Nuevo" en Recordatorios, o anota una llamada y elige cuándo volver a llamar. También puedes programar actividades tocando un día en el <b>calendario</b> de arriba.</Vacio> : <>
       <Bloque t="⏰ Atrasados" lista={grupos.atrasados} color="var(--bad)" /><Bloque t="Hoy" lista={grupos.hoy} /><Bloque t="Próximos 7 días" lista={grupos.proximos} /><Bloque t="Más adelante" lista={grupos.despues} /></>}
   </div>;
 }

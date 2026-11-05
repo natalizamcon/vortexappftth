@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 31 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 33 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -183,4 +183,15 @@ select n, comprobacion, resultado, estado from (
   select 31, 'Eliminar clientes, solo el administrador principal (archivo 25)',
          (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('es_admin_principal','resumen_eliminacion_cliente','eliminar_cliente'))::text,
          case when (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('es_admin_principal','resumen_eliminacion_cliente','eliminar_cliente')) = 3 then 'OK' else 'FALTA: ejecuta 25_eliminar_cliente.sql' end
+  union all
+  select 32, 'Simulador privado por cuenta (archivo 26)',
+         (select count(*) from pg_policies where schemaname = 'public' and tablename = 'simulaciones' and policyname = 'p_solo_propias')::text,
+         case when (select count(*) from pg_policies where schemaname = 'public' and tablename = 'simulaciones' and policyname = 'p_solo_propias') = 1 then 'OK' else 'FALTA: ejecuta 26_simulador_privado.sql' end
+  union all
+  select 33, 'Agenda de dirigentes privada (archivo 27)',
+         ((select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('agenda_contactos','agenda_llamadas','agenda_recordatorios','agenda_compartido'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('agenda_personas','agenda_puede_ver','agenda_puede_editar','agenda_es_dueno')))::text,
+         case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('agenda_contactos','agenda_llamadas','agenda_recordatorios','agenda_compartido')) = 4
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('agenda_personas','agenda_puede_ver','agenda_puede_editar','agenda_es_dueno')) = 4
+              then 'OK' else 'FALTA: ejecuta 27_agenda.sql' end
 ) r order by n;

@@ -18,13 +18,14 @@ import { AlertasProvider, ContadorAlertas, useAlertas } from "./lib/alertas";
 import { BuscadorGlobal } from "./pages/BuscadorGlobal";
 import { VERSION } from "./version";
 import { CambiarClave } from "./pages/CambiarClave";
+import Agenda, { ContadorAgenda } from "./pages/Agenda";
 
 const RUTAS: [string, string, string | null][] = [
-  ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
+  ["dashboard", "Dashboard", null], ["agenda", "Agenda", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
   ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
 ];
 const MODULO_RUTA: Record<string, string> = { red: "red", clientes: "clientes", cobranzas: "cobranzas", servicios: "instalaciones", campo: "instalaciones", inventario: "inventario", finanzas: "finanzas", formularios: "formularios", reportes: "reportes" };
-const ICONOS: Record<string, string> = { dashboard: "🏠", red: "🌐", clientes: "👥", servicios: "🛠️", inventario: "📦", finanzas: "💰", formularios: "🖨️", alertas: "🔔", reportes: "📊", configuracion: "⚙️" };
+const ICONOS: Record<string, string> = { dashboard: "🏠", agenda: "📒", red: "🌐", clientes: "👥", servicios: "🛠️", inventario: "📦", finanzas: "💰", formularios: "🖨️", alertas: "🔔", reportes: "📊", configuracion: "⚙️" };
 const useHash = () => { const [h, setH] = useState(location.hash.slice(2) || "dashboard"); useEffect(() => { const f = () => setH(location.hash.slice(2) || "dashboard"); addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); }, []); return h; };
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
   const pagina = () => {
     const modulo = MODULO_RUTA[ruta]; if (modulo && !puede(modulo, "ver")) return <Dashboard />;
     switch (ruta) {
+      case "agenda": return <Agenda />;
       case "configuracion": case "zonas": case "usuarios": case "papelera": case "roles": case "socios": return perfil.rol === "admin" ? <Configuracion inicial={ruta === "configuracion" ? undefined : ruta} /> : <Dashboard />;
       case "clientes": case "cobranzas": return <Clientes inicial={ruta === "cobranzas" ? "cobranzas" : undefined} />; case "red": return <Red />;
       case "servicios": case "campo": return <Servicios />; case "inventario": return <Inventario />; case "finanzas": return <Finanzas />; case "alertas": return <Alertas />; case "formularios": return <Formularios />; case "reportes": return <Reportes />;
@@ -58,7 +60,7 @@ export default function App() {
         <select aria-label="Zona" value={zonaId} onChange={e => setZonaId(e.target.value)}><option value="">Todas las zonas</option>{zonasVis.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select>
         <BuscadorGlobal onElegir={r => { location.hash = "#/" + r; setBusq(x => x + 1); setMenu(false); }} />
       </div>
-      <nav>{items.map(([k, l]) => <a key={k} href={"#/" + k} className={actual === k ? "on" : ""} onClick={() => setMenu(false)}><span className="ico">{ICONOS[k]}</span><span>{l}</span>{k === "alertas" && <ContadorAlertas />}</a>)}</nav>
+      <nav>{items.map(([k, l]) => <a key={k} href={"#/" + k} className={actual === k ? "on" : ""} onClick={() => setMenu(false)}><span className="ico">{ICONOS[k]}</span><span>{l}</span>{k === "alertas" && <ContadorAlertas />}{k === "agenda" && <ContadorAgenda />}</a>)}</nav>
       <div className="lateral-pie"><b>{perfil.nombre || perfil.email}</b><br /><small className="mute">{NOMBRE_ROL[perfil.rol] || perfil.rol}</small><div className="fila" style={{ marginTop: 8 }}><button className="btn suave chico" onClick={() => { setMenu(false); setClaveAbierta(true); }}>🔑 Cambiar contraseña</button><button className="btn suave chico" onClick={salir}>Salir</button></div><div className="mute" style={{ marginTop: 8, fontSize: 11 }}>Vortex · versión {VERSION}</div></div>
     </aside>
     <div className="topbar">

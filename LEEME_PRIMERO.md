@@ -274,3 +274,23 @@ git push origin main
 3. **Eliminar clientes:** en la ficha de cada cliente, abajo, el botón **🗑 Eliminar este cliente…**. **Solo lo ve y lo puede usar el administrador principal** (la base de datos también lo exige; un rol personalizado, aunque tenga permisos de administrador, no puede). Muestra qué se perdería y pide escribir el código del cliente. Al eliminar: el puerto de la NAP queda libre, los equipos con serie vuelven al almacén y los movimientos del banco ligados vuelven a "por revisar". Queda un registro de lo eliminado. Para clientes que se fueron de verdad, usa **Dar de baja**, que conserva el historial.
 4. `sql/3_verificar_instalacion.sql` ahora tiene 31 filas en OK.
 
+### Novedades de la 3.13 · Simulador privado por cuenta y inversores que siempre se ven
+1. En Supabase → SQL Editor ejecuta **`sql/26_simulador_privado.sql`** (después del 25). Si todavía no corriste el 23 y el 24, córrelos también (los inversores nuevos los necesitan).
+2. **Simulador:** los **escenarios guardados son privados de cada cuenta**: cada persona ve solo los que guardó con su usuario (la base de datos lo exige; ni el administrador ve los de otras cuentas). Se llama ahora "Mis escenarios guardados". El presupuesto de cada zona sigue siendo compartido.
+3. **Inversores:**
+   - El mensaje de "guardado" o de error ahora aparece **junto al botón Agregar inversor** (antes salía arriba de la pantalla y no se veía).
+   - El formulario trae **"Zona del inversor"**; al guardar, la pantalla pasa a esa zona para que lo veas en la lista.
+   - Si falta correr el SQL 23 o 24, aparece un **aviso rojo arriba** diciendo cuál correr. Un inversor sencillo en bolivianos se guarda igual; con dólares, propósito o comprobante pide actualizar la base de datos primero.
+   - Si la lista falla o está vacía por la zona elegida, ahora lo explica.
+4. `sql/3_verificar_instalacion.sql` ahora tiene 32 filas en OK.
+
+### Novedades de la 3.14 · Agenda de dirigentes (privada y compartible)
+1. En Supabase → SQL Editor ejecuta **`sql/27_agenda.sql`** (después del 26; no borra nada).
+2. Nuevo apartado **📒 Agenda** en el menú principal (segundo lugar, después del Dashboard), con un numerito rojo cuando tienes recordatorios de hoy o atrasados.
+3. **Dirigentes:** anota nombre, teléfono, zona o comunidad, cargo, organización, ubicación (con GPS si quieres), cómo va (Nuevo, Contactado, Reunión agendada, Interesado, Negociando, Cerrado, Descartado) y notas. Solo el nombre es obligatorio. Hay botón "Guardar y agregar otro" para anotar varios seguidos. Búsqueda, filtros por zona, estado y quién lo anotó, y descarga de la lista.
+4. **Llamar con un toque:** botones 📞 Llamar, 💬 WhatsApp y 📍 Cómo llegar (con GPS o con la referencia escrita).
+5. **Llamadas:** se anota el resultado (contestó, no contestó, ocupado, número equivocado, reunión acordada, pidió que llame después) y una nota; de inmediato se ofrece "¿Cuándo vuelves a llamar?" (mañana, en 3 días, en 1 semana, el lunes) en un toque.
+6. **Recordatorios** para volver a llamar, viajar a una reunión u otra cosa. La pestaña **Hoy y lo que viene** los ordena en atrasados, hoy, próximos 7 días y más adelante, con Hecho ✓, Posponer y 📅 para agregarlos al calendario del celular con alarma.
+7. **Privacidad:** cada dirigente es privado de quien lo anotó. Solo lo ven las personas con las que él lo comparta, "solo para ver" o "para ver y anotar". Lo exige la base de datos: ni el administrador ve lo que otra cuenta no le compartió. Quien recibe uno compartido puede dejar de verlo cuando quiera.
+8. `sql/3_verificar_instalacion.sql` ahora tiene 33 filas en OK.
+

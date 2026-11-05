@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Vacio, bs, hoy, useAlcance, useQuery } from "../lib/ui";
@@ -12,8 +12,12 @@ const BASE_TXT: Record<string, string> = { mensual: "por mes", anual: "por año"
 
 /** Inversores: capital en bolivianos o dólares (con el tipo de cambio usado), interés pactado por % o por monto, y comprobante de lo invertido. */
 export function Inversores() {
-  const { zonaId, proyectoId, zonas } = useApp(), al = useAlcance();
+  const { zonaId, setZonaId, proyectoId, zonas } = useApp(), al = useAlcance();
   const inv = useQuery(() => al(supabase.from("inversores").select("*, zonas(nombre)").order("nombre")), [proyectoId, zonaId]), pag = useQuery(() => al(supabase.from("pagos_inversores").select("*").order("fecha", { ascending: false }), false), [proyectoId, inv.data]);
+  const esq = useQuery(() => supabase.from("inversores").select("moneda, proposito, comprobante_path, interes_modo").limit(1), []), faltaEsquema = !esq.loading && !!esq.error;
+  const [mf, setMf] = useState(""), [okf, setOkf] = useState(""), [zonaForm, setZonaForm] = useState(zonaId || ""), avisoForm = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (zonaId) setZonaForm(zonaId); }, [zonaId]);
+  const mostrar = (bien: boolean, t: string) => { if (bien) { setOkf(t); setMf(""); } else { setMf(t); setOkf(""); } setTimeout(() => avisoForm.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
   const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [comp, setComp] = useState<File | null>(null), [clave, setClave] = useState(0);
   const [f, setF] = useState({ nombre: "", moneda: "BOB" as Moneda, cap: "", tc: "", plazo: "12", fecha: hoy(), modo: "porcentaje" as ModoInteres, valor: "", base: "mensual" as BaseInteres, proposito: "" });
   const [g, setG] = useState({ inversor_id: "", fecha: hoy(), monto: "", nota: "" }), [arch, setArch] = useState<File | null>(null);
@@ -24,15 +28,24 @@ export function Inversores() {
   const cambiarModo = (modo: ModoInteres) => setF(x => ({ ...x, modo, base: modo === "porcentaje" && x.base === "total" ? "mensual" : x.base }));
 
   const crear = async () => {
-    setMsg(""); setOk(""); const z = zonas.find(x => x.id === zonaId); if (!z) return setMsg("Elige una zona arriba."); if (!f.nombre.trim()) return setMsg("Escribe el nombre del inversor."); if (!calc.ok) return setMsg(calc.error || "Revisa los datos.");
+    setMf(""); setOkf(""); const z = zonas.find(x => x.id === (zonaForm || zonaId)); if (!z) return mostrar(false, "Elige la zona del inversor."); if (!f.nombre.trim()) return mostrar(false, "Escribe el nombre del inversor."); if (!calc.ok) return mostrar(false, calc.error || "Revisa los datos.");
     setOcup(true);
     try {
       const ruta = comp ? await subirArchivo("comprobantes", z.proyecto_id, comp) : null;
-      const { error } = await supabase.from("inversores").insert({ proyecto_id: z.proyecto_id, zona_id: z.id, nombre: f.nombre.trim(), monto: calc.montoBs, interes: calc.interes, periodo_interes: calc.periodo, plazo_meses: Math.round(num(f.plazo)), fecha_inicio: f.fecha,
-        proposito: f.proposito.trim() || null, moneda: f.moneda, monto_original: num(f.cap), tipo_cambio: f.moneda === "USD" ? num(f.tc) : null, interes_modo: f.modo, interes_monto: f.modo === "monto" ? num(f.valor) : null, interes_base: f.modo === "monto" ? f.base : null, comprobante_path: ruta });
+      const basico = { proyecto_id: z.proyecto_id, zona_id: z.id, nombre: f.nombre.trim(), monto: calc.montoBs, interes: calc.interes, periodo_interes: calc.periodo, plazo_meses: Math.round(num(f.plazo)), fecha_inicio: f.fecha };
+      let { error } = await supabase.from("inversores").insert({ ...basico, proposito: f.proposito.trim() || null, moneda: f.moneda, monto_original: num(f.cap), tipo_cambio: f.moneda === "USD" ? num(f.tc) : null, interes_modo: f.modo, interes_monto: f.modo === "monto" ? num(f.valor) : null, interes_base: f.modo === "monto" ? f.base : null, comprobante_path: ruta });
+      let aviso = "";
+      if (error && /column|schema cache|does not exist/i.test(error.message)) {
+        // Falta actualizar la base de datos (archivos 23 y 24). Si es un inversor sencillo en bolivianos se guarda igual; si usa dólares, propósito o comprobante, se avisa.
+        if (f.moneda === "BOB" && !f.proposito.trim() && !ruta && f.modo === "porcentaje") { const r2 = await supabase.from("inversores").insert(basico); error = r2.error; if (!error) aviso = " Se guardó sin las funciones nuevas porque falta actualizar la base de datos: en Supabase corre 23_inversores_moneda.sql y 24_eliminar_y_propositos.sql."; }
+        else throw new Error("No se pudo guardar porque falta actualizar la base de datos. En Supabase → SQL Editor corre los archivos 23_inversores_moneda.sql y 24_eliminar_y_propositos.sql, recarga la página y vuelve a intentar. (Detalle: " + error.message + ")");
+      }
       if (error) throw new Error(error.message);
-      setOk(`Inversor "${f.nombre.trim()}" agregado${ruta ? " con su comprobante" : ""}.`); setF({ ...f, nombre: "", cap: "", valor: "", proposito: "" }); setComp(null); setClave(k => k + 1); inv.recargar();
-    } catch (e: any) { setMsg(e.message); }
+      mostrar(true, `✅ Inversor "${f.nombre.trim()}" agregado en la zona ${z.nombre}${ruta ? " con su comprobante" : ""}. Ya aparece en la lista de arriba.${aviso}`);
+      setF({ ...f, nombre: "", cap: "", valor: "", proposito: "" }); setComp(null); setClave(k => k + 1);
+      if (zonaId && zonaId !== z.id) setZonaId(z.id); // para que se vea en la lista aunque estuvieras mirando otra zona
+      inv.recargar();
+    } catch (e: any) { mostrar(false, e.message); }
     setOcup(false);
   };
   const pagar = async () => { setMsg(""); setOk(""); const inversor = I.find(x => x.id === g.inversor_id); if (!inversor) return setMsg("Elige al inversor."); try { const ruta = arch ? await subirArchivo("comprobantes", inversor.proyecto_id, arch) : null; const { error } = await supabase.from("pagos_inversores").insert({ inversor_id: g.inversor_id, proyecto_id: inversor.proyecto_id, fecha: g.fecha, monto: num(g.monto), nota: g.nota, comprobante_path: ruta }); if (error) throw new Error(error.message); setG({ ...g, monto: "", nota: "" }); setArch(null); pag.recargar(); } catch (e: any) { setMsg(e.message); } };
@@ -41,7 +54,8 @@ export function Inversores() {
   const debe = I.reduce((s, x) => s + totalBs(x) - pagado(x.id), 0);
   const modoBtn = (m: ModoInteres, t: string) => <button type="button" className={"btn chico " + (f.modo === m ? "" : "suave")} onClick={() => cambiarModo(m)}>{t}</button>;
 
-  return <>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
+  return <>{faltaEsquema && <Aviso tipo="mal">⚠️ Falta actualizar la base de datos para usar dólares, el propósito y el comprobante. En Supabase → SQL Editor corre <b>23_inversores_moneda.sql</b> y <b>24_eliminar_y_propositos.sql</b>, y recarga esta página. Mientras tanto solo se pueden guardar inversores sencillos en bolivianos.</Aviso>}
+    {inv.error && <Aviso tipo="mal">No se pudo cargar la lista de inversores: {inv.error}</Aviso>}{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="grid gk" style={{ marginBottom: 14 }}><div className="card kpi"><span>Capital recibido</span><b>{bs(I.reduce((s, x) => s + num(x.monto), 0))}</b></div><div className="card kpi"><span>Intereses a devolver</span><b>{bs(I.reduce((s, x) => s + totalInt(x), 0))}</b></div><div className="card kpi"><span>Pagado a inversores</span><b>{bs(P.reduce((s, x) => s + num(x.monto), 0))}</b></div><div className="card kpi"><span>Lo que debo ahora</span><b style={{ color: debe > 0 ? "var(--bad)" : "var(--ok)" }}>{bs(debe)}</b></div></div>
     <div className="card tw"><h2>Inversores</h2>{I.length ? <table><thead><tr><th>Inversor</th><th>Zona</th><th>Capital</th><th>Interés</th><th>Plazo</th><th>Total a devolver</th><th>Cuota mensual</th><th>Pagado</th><th>Saldo</th><th>Comprobante</th><th /></tr></thead><tbody>{I.map(x => {
       const r = resumenGuardado(x), t = totalBs(x), usd = x.moneda === "USD";
@@ -50,11 +64,11 @@ export function Inversores() {
         <td><b>{pct(r.pctMes)}</b> por mes<br /><small className="mute">{pct(r.pctAnio)} por año{x.interes_modo === "monto" && x.interes_monto ? ` · pactado ${fmt(num(x.interes_monto), usd ? "USD" : "BOB")} ${BASE_TXT[x.interes_base || "total"]}` : ""}</small></td>
         <td>{x.plazo_meses} meses</td><td>{bs(t)}{usd && <><br /><small className="mute">{fmt(r.total, "USD")}</small></>}</td><td>{bs(t / (num(x.plazo_meses) || 1))}</td><td>{bs(pagado(x.id))}</td><td><b>{bs(Math.max(0, t - pagado(x.id)))}</b></td>
         <td>{x.comprobante_path ? <button className="btn suave chico" onClick={() => ver(x.comprobante_path)}>Ver comprobante</button> : <small className="mute">Sin comprobante</small>}</td>
-        <td><button className="btn suave chico" onClick={async () => { if (!confirm(`¿Mandar a "${x.nombre}" a la papelera? Sus pagos también se ocultan y podrás recuperarlo desde el menú Papelera.`)) return; try { await aPapelera("inversores", [x.id]); inv.recargar(); } catch (e: any) { setMsg(e.message); } }}>A la papelera</button></td></tr>; })}</tbody></table> : <Vacio>Aún no hay inversores.</Vacio>}
+        <td><button className="btn suave chico" onClick={async () => { if (!confirm(`¿Mandar a "${x.nombre}" a la papelera? Sus pagos también se ocultan y podrás recuperarlo desde el menú Papelera.`)) return; try { await aPapelera("inversores", [x.id]); inv.recargar(); } catch (e: any) { setMsg(e.message); } }}>A la papelera</button></td></tr>; })}</tbody></table> : <Vacio>{inv.error ? "No se pudo cargar la lista." : zonaId ? `No hay inversores en la zona ${zonas.find(z => z.id === zonaId)?.nombre || ""}. Si agregaste uno en otra zona, cambia la zona arriba o elige "Todas las zonas".` : "Aún no hay inversores."}</Vacio>}
       <p className="mute" style={{ margin: "8px 0 0" }}>Los totales, el saldo y los pagos están en bolivianos, con el tipo de cambio que registraste al recibir la inversión.</p></div>
 
     <div className="grid g2"><div className="card"><h2>Nuevo inversor</h2>
-      <div className="form"><Campo l="Nombre"><input value={f.nombre} onChange={e => set("nombre", e.target.value)} /></Campo>
+      <div className="form"><Campo l="Zona del inversor"><select value={zonaForm} onChange={e => setZonaForm(e.target.value)}><option value="">Elige la zona…</option>{zonas.filter(z => !proyectoId || z.proyecto_id === proyectoId).map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}</select></Campo><Campo l="Nombre"><input value={f.nombre} onChange={e => set("nombre", e.target.value)} /></Campo>
         <Campo l="Invirtió en"><select value={f.moneda} onChange={e => set("moneda", e.target.value)}><option value="BOB">Bolivianos (Bs)</option><option value="USD">Dólares (USD)</option></select></Campo>
         <Campo l={`Monto invertido (${f.moneda === "USD" ? "USD" : "Bs"})`}><input type="number" min={0} step="0.01" value={f.cap} onChange={e => set("cap", e.target.value)} /></Campo>
         {f.moneda === "USD" && <Campo l="Tipo de cambio que se usó (Bs por 1 USD)"><input type="number" min={0} step="0.01" placeholder="por ejemplo 6.96" value={f.tc} onChange={e => set("tc", e.target.value)} /></Campo>}
@@ -71,6 +85,7 @@ export function Inversores() {
         <div>Pagarás <b>{fmt(calc.porMes, f.moneda)}</b> por mes · <b>{fmt(calc.interesTotal, f.moneda)}</b> de interés en {num(f.plazo)} meses</div>
         <div>Total a devolver: <b>{fmt(calc.totalDevolver, f.moneda)}</b>{f.moneda === "USD" && <> ≈ <b>{bs(calc.totalDevolver * calc.factor)}</b></>}</div></div> : <p className="mute" style={{ margin: "8px 0" }}>{calc.error}</p>}
       <div className="form"><Campo l="Comprobante de lo que invirtió (foto o PDF)"><input type="file" accept="image/*,.pdf" key={clave} onChange={e => setComp(e.target.files?.[0] || null)} /></Campo></div>
+      <div ref={avisoForm}>{mf && <Aviso tipo="mal">{mf}</Aviso>}{okf && <Aviso tipo="ok">{okf}</Aviso>}</div>
       <button className="btn" disabled={ocup || !f.nombre.trim() || !calc.ok} onClick={crear}>{ocup ? "Guardando…" : "Agregar inversor"}</button></div>
       <div className="card"><h2>Registrar pago a un inversor</h2><div className="form"><Campo l="Inversor"><select value={g.inversor_id} onChange={e => setG({ ...g, inversor_id: e.target.value })}><option value="">Elige…</option>{I.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></Campo><Campo l="Fecha"><input type="date" value={g.fecha} onChange={e => setG({ ...g, fecha: e.target.value })} /></Campo><Campo l="Monto pagado (Bs)"><input type="number" value={g.monto} onChange={e => setG({ ...g, monto: e.target.value })} /></Campo><Campo l="Nota"><input value={g.nota} onChange={e => setG({ ...g, nota: e.target.value })} /></Campo><Campo l="Respaldo"><input type="file" key={String(P.length)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo></div><button className="btn" disabled={!g.inversor_id || !(num(g.monto) > 0)} onClick={pagar}>Registrar pago</button></div></div>
     <div className="card tw"><h2>Pagos a inversores</h2>{P.length ? <table><thead><tr><th>Fecha</th><th>Inversor</th><th>Monto</th><th>Nota</th><th /></tr></thead><tbody>{P.map(p => <tr key={p.id}><td>{p.fecha}</td><td>{I.find(x => x.id === p.inversor_id)?.nombre}</td><td><b>{bs(p.monto)}</b></td><td>{p.nota || "—"}</td><td>{p.comprobante_path && <button className="btn suave chico" onClick={() => ver(p.comprobante_path)}>Ver respaldo</button>}</td></tr>)}</tbody></table> : <Vacio>Aún no hay pagos a inversores.</Vacio>}</div></>;

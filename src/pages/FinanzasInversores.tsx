@@ -83,6 +83,27 @@ function EditarInversor({ x, onClose, onGuardado }: { x: any; onClose: () => voi
   </Drawer>;
 }
 
+/** Registrar un inversor nuevo desde otra pantalla (por ejemplo, al comprar algo con dinero de alguien que todavía no está en la lista). Queda en Finanzas → Inversores con todos sus datos. */
+export function NuevoInversorDrawer({ zonaInicial, onClose, onCreado }: { zonaInicial: string; onClose: () => void; onCreado: (fila: any) => void }) {
+  const { zonas, proyectoId, proyectos } = useApp(), [f, setF] = useState<FormInv>(formVacio(zonaInicial, proyectoId)), [comp, setComp] = useState<File | null>(null), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false);
+  const guardar = async () => {
+    setMsg(""); const r = filaDe(f, zonas, proyectoId, proyectos); if (r.error) return setMsg(r.error); setOcup(true);
+    try {
+      const ruta = comp ? await subirArchivo("comprobantes", r.fila.proyecto_id, comp) : null, { error } = await supabase.from("inversores").insert({ ...r.fila, comprobante_path: ruta });
+      if (error) throw new Error(/column|schema cache/i.test(error.message) ? "Falta actualizar la base de datos: en Supabase corre los archivos 23, 24 y 29." : /zona_id.*null|not-null/i.test(error.message) ? "Para inversores generales falta correr en Supabase el archivo 29_fondo_inversion.sql." : error.message);
+      onCreado(r.fila);
+    } catch (e: any) { setMsg(e.message); }
+    setOcup(false);
+  };
+  return <Drawer titulo="Registrar un inversor nuevo" ancho={520} onClose={onClose}>
+    <Aviso>Anota aquí al inversor con todos sus datos. Queda guardado en <b>Finanzas → Inversores</b> y su dinero suma al fondo, listo para usarlo en esta compra o gasto.</Aviso>
+    {msg && <Aviso tipo="mal">{msg}</Aviso>}
+    <CamposInversor f={f} setF={setF} />
+    <div className="form" style={{ gridTemplateColumns: "1fr" }}><Campo l="Comprobante de lo que invirtió (foto o PDF)"><input type="file" accept="image/*,.pdf" onChange={e => setComp(e.target.files?.[0] || null)} /></Campo></div>
+    <div className="fila" style={{ marginTop: 10 }}><button className="btn" disabled={ocup || !f.nombre.trim()} onClick={guardar}>{ocup ? "Guardando…" : "Guardar inversor"}</button><button className="btn suave" onClick={onClose}>Cancelar</button></div>
+  </Drawer>;
+}
+
 /** Inversores: capital en bolivianos o dólares, interés por % o por monto, comprobante, y su efecto en el fondo de inversión. Se puede corregir todo después. */
 export function Inversores() {
   const { zonaId, setZonaId, proyectoId, zonas, proyectos } = useApp(), al = useAlcance();

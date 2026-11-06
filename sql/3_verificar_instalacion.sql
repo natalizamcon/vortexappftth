@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 35 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 36 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -209,4 +209,17 @@ select n, comprobacion, resultado, estado from (
                and (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_fondo_inversion') = 1
                and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'fondo_saldo') = 1
               then 'OK' else 'FALTA: ejecuta 29_fondo_inversion.sql' end
+  union all
+  select 36, 'Dinero disponible, historial de compras y fotos de instalación (archivo 30)',
+         ((select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'movimientos' and column_name in ('fuente','fuente_detalle','fin_movimiento_id'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'gastos_empresa' and column_name in ('proyecto_id','zona_id','fuente','fuente_detalle'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'instalaciones' and column_name = 'fotos')
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_gasto_fuente','v_ingreso_mes_zona','v_ingresos_disponibles'))
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('ingreso_saldo','validar_fuente')))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'movimientos' and column_name in ('fuente','fuente_detalle','fin_movimiento_id')) = 3
+               and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'gastos_empresa' and column_name in ('proyecto_id','zona_id','fuente','fuente_detalle')) = 4
+               and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'instalaciones' and column_name = 'fotos') = 1
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name in ('v_gasto_fuente','v_ingreso_mes_zona','v_ingresos_disponibles')) = 3
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('ingreso_saldo','validar_fuente')) = 2
+              then 'OK' else 'FALTA: ejecuta 30_dinero_disponible.sql' end
 ) r order by n;

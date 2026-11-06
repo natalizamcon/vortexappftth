@@ -69,7 +69,7 @@ export function CostosVariables() {
 
   const registrar = async () => {
     setMsg(""); setOk("");
-    if (f.origen === "Inventario") { if (!f.material_id) return setMsg("Elige el artículo del inventario."); if (n(f.cantidad) > disponible) return setMsg(`No hay suficiente: hay ${disponible} y pides ${n(f.cantidad)}.`); }
+    if (f.origen === "Inventario") { if (!f.material_id) return setMsg("Elige el artículo del almacén."); if (n(f.cantidad) > disponible) return setMsg(`No hay suficiente: hay ${disponible} y pides ${n(f.cantidad)}.`); }
     else { if (!f.concepto.trim()) return setMsg("Escribe qué se compró."); if (!(n(f.real_total) > 0)) return setMsg("Escribe el costo real de la compra."); }
     if (!(n(f.cantidad) > 0)) return setMsg("La cantidad debe ser mayor a 0.");
     setOcup(true);
@@ -77,12 +77,12 @@ export function CostosVariables() {
       const ruta = arch ? await subirArchivo("comprobantes", zona.proyecto_id, arch) : null;
       const { error } = await supabase.rpc("registrar_costo_variable", { p: { zona_id: zona.id, origen: f.origen, destino: f.destino || "General de la red", material_id: f.material_id || null, cantidad: n(f.cantidad), concepto: f.concepto, real_total: f.real_total === "" ? null : n(f.real_total), estimado_total: f.estimado_total === "" ? null : n(f.estimado_total), fecha: f.fecha, comprobante_path: ruta, nota: f.nota } });
       if (error) throw new Error(error.message);
-      setF({ ...vacio, origen: f.origen, destino: f.destino }); setArch(null); setOk(f.origen === "Inventario" ? "Registrado y descontado del inventario." : "Gasto registrado."); lista.recargar();
+      setF({ ...vacio, origen: f.origen, destino: f.destino }); setArch(null); setOk(f.origen === "Inventario" ? "Registrado y descontado del almacén." : "Gasto registrado."); lista.recargar();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
   const quitar = async (x: any) => {
-    const texto = x.origen === "Inventario" ? `¿Quitar "${x.concepto}"?\n\nEl material (${n(x.cantidad)}) vuelve al inventario y este registro va a la papelera.` : `¿Mandar "${x.concepto}" a la papelera? Podrás recuperarlo desde Configuración → Papelera.`;
+    const texto = x.origen === "Inventario" ? `¿Quitar "${x.concepto}"?\n\nEl material (${n(x.cantidad)}) vuelve al almacén y este registro va a la papelera.` : `¿Mandar "${x.concepto}" a la papelera? Podrás recuperarlo desde Configuración → Papelera.`;
     if (!confirm(texto)) return; setMsg("");
     const { error } = await supabase.rpc("quitar_costo_variable", { p_id: x.id }); if (error) setMsg(error.message); else lista.recargar();
   };
@@ -93,12 +93,12 @@ export function CostosVariables() {
     <div className="grid gk" style={{ marginBottom: 14 }}><Kpi t="Costo estimado" v={bs(est)} /><Kpi t="Costo real" v={bs(real)} /><Kpi t="Diferencia (real − estimado)" v={bs(dif)} c={dif <= 0 ? "var(--ok)" : "var(--bad)"} /><Kpi t="Presupuesto de materiales y red" v={presupuesto ? bs(presupuesto) : "—"} s={presupuesto ? `Usado: ${Math.round((real / presupuesto) * 100)}%` : "Sin guía cargada"} /></div>
     <div className="grid g2">
       <div className="card"><h2>Registrar lo que se usó o gastó</h2><div className="form" style={{ gridTemplateColumns: "1fr" }}>
-        <Campo l="Origen"><select value={f.origen} onChange={e => setF({ ...f, origen: e.target.value })}><option value="Inventario">Del inventario (ya tiene precio)</option><option value="Compra directa">Compra directa (sin inventario)</option></select></Campo>
+        <Campo l="Origen"><select value={f.origen} onChange={e => setF({ ...f, origen: e.target.value })}><option value="Inventario">Del almacén (ya tiene precio)</option><option value="Compra directa">Compra directa (sin almacén)</option></select></Campo>
         <Campo l="Para"><select value={f.destino} onChange={e => setF({ ...f, destino: e.target.value })}><option value="">General de la red</option>{destinos.slice(1).map(d => <option key={d}>{d}</option>)}</select></Campo>
         {f.origen === "Inventario" ? <>
-          <Campo l="Artículo del inventario"><select value={f.material_id} onChange={e => setF({ ...f, material_id: e.target.value })}><option value="">Elige…</option>{M.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></Campo>
+          <Campo l="Artículo del almacén"><select value={f.material_id} onChange={e => setF({ ...f, material_id: e.target.value })}><option value="">Elige…</option>{M.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></Campo>
           <Campo l="Cantidad"><input type="number" min={0} step={0.01} value={f.cantidad} onChange={e => setF({ ...f, cantidad: e.target.value })} /></Campo>
-          {mat && <div className="aviso ok" style={{ margin: 0 }}>Se descuenta solo del inventario (primero de la zona, luego del almacén central). Disponible: <b>{disponible}</b> {mat.unidad} · costo registrado <b>{bs(mat.costo)}</b> por unidad.</div>}
+          {mat && <div className="aviso ok" style={{ margin: 0 }}>Se descuenta solo del almacén (primero de la zona, luego del almacén central). Disponible: <b>{disponible}</b> {mat.unidad} · costo registrado <b>{bs(mat.costo)}</b> por unidad.</div>}
         </> : <>
           <Campo l="¿Qué se compró?"><input value={f.concepto} onChange={e => setF({ ...f, concepto: e.target.value })} /></Campo>
           <Campo l="Cantidad"><input type="number" min={0} step={0.01} value={f.cantidad} onChange={e => setF({ ...f, cantidad: e.target.value })} /></Campo>
@@ -107,7 +107,7 @@ export function CostosVariables() {
         <Campo l="Precio estimado total (opcional, para comparar)"><input type="number" min={0} step={0.01} value={f.estimado_total} onChange={e => setF({ ...f, estimado_total: e.target.value })} /></Campo>
         <Campo l="Fecha"><input type="date" value={f.fecha} onChange={e => setF({ ...f, fecha: e.target.value })} /></Campo>
         <Campo l="Comprobante (si hay)"><input type="file" key={String(ok)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo>
-      </div><button className="btn" style={{ width: "100%" }} disabled={ocup} onClick={registrar}>{ocup ? "Guardando…" : f.origen === "Inventario" ? "Registrar y descontar del inventario" : "Registrar gasto"}</button></div>
+      </div><button className="btn" style={{ width: "100%" }} disabled={ocup} onClick={registrar}>{ocup ? "Guardando…" : f.origen === "Inventario" ? "Registrar y descontar del almacén" : "Registrar gasto"}</button></div>
 
       <div className="card"><h2>Estimado contra real a medida que avanza</h2>
         {asc.length >= 2 ? <><Linea etiquetas={asc.map(x => String(x.fecha).slice(5).split("-").reverse().join("/"))} series={[{ nombre: "Estimado", color: "var(--lil)", datos: acumE }, { nombre: "Real", color: "var(--ok)", datos: acumR }]} />
@@ -121,13 +121,13 @@ export function CostosVariables() {
     </div>
 
     <div className="card tw"><h2>Registro de lo implementado</h2>{lista.loading ? <Cargando /> : L.length ? <table><thead><tr><th>Fecha</th><th>Para</th><th>Concepto</th><th>Origen</th><th>Cant.</th><th>Estimado</th><th>Real</th><th>Diferencia</th><th>Comprobante</th><th /></tr></thead>
-      <tbody>{L.map(x => { const e = n(x.estimado_total ?? x.real_total), d = n(x.real_total) - e; return <tr key={x.id}><td>{x.fecha}</td><td>{x.destino || "—"}</td><td>{x.concepto}{x.nota && <><br /><small className="mute">{x.nota}</small></>}</td><td>{x.origen === "Inventario" ? "Inventario" : "Compra directa"}</td><td>{n(x.cantidad)}</td><td>{bs(e)}</td><td>{bs(x.real_total)}</td><td style={{ color: d <= 0 ? "var(--ok)" : "var(--bad)" }}>{bs(d)}</td>
+      <tbody>{L.map(x => { const e = n(x.estimado_total ?? x.real_total), d = n(x.real_total) - e; return <tr key={x.id}><td>{x.fecha}</td><td>{x.destino || "—"}</td><td>{x.concepto}{x.nota && <><br /><small className="mute">{x.nota}</small></>}</td><td>{x.origen === "Inventario" ? "Almacén" : "Compra directa"}</td><td>{n(x.cantidad)}</td><td>{bs(e)}</td><td>{bs(x.real_total)}</td><td style={{ color: d <= 0 ? "var(--ok)" : "var(--bad)" }}>{bs(d)}</td>
         <td>{x.comprobante_path ? <button className="btn suave chico" onClick={() => ver(x.comprobante_path)}>Ver</button> : "—"}</td>
         <td><div className="fila"><button className="btn suave chico" onClick={() => setEd(x)}>Editar</button><button className="btn suave chico" onClick={() => quitar(x)}>Quitar</button></div></td></tr>; })}</tbody></table> : <Vacio>Aún no registraste lo que se usó o gastó en esta zona.</Vacio>}</div>
 
     {ed && <FormModal titulo={"Editar · " + ed.concepto} valores={{ ...ed, estimado_total: ed.estimado_total ?? ed.real_total }} onClose={() => setEd(null)}
       campos={[{ k: "fecha", l: "Fecha", t: "date", req: true }, { k: "estimado_total", l: "Precio estimado total (Bs)", t: "number", paso: 0.01 }, ...(ed.origen === "Compra directa" ? [{ k: "real_total", l: "Costo real total (Bs)", t: "number" as const, paso: 0.01, req: true }] : []), { k: "nota", l: "Nota" }]}
-      extra={ed.origen === "Inventario" ? <p className="mute">El material y la cantidad no se cambian aquí porque ya se descontaron del inventario. Si te equivocaste, usa "Quitar" (el material vuelve al inventario) y regístralo de nuevo.</p> : null}
+      extra={ed.origen === "Inventario" ? <p className="mute">El material y la cantidad no se cambian aquí porque ya se descontaron del almacén. Si te equivocaste, usa "Quitar" (el material vuelve al almacén) y regístralo de nuevo.</p> : null}
       onGuardar={async v => { const c: any = { fecha: v.fecha, estimado_total: v.estimado_total, nota: v.nota }; if (ed.origen === "Compra directa") { c.real_total = v.real_total; c.costo_unitario = n(ed.cantidad) ? Math.round((n(v.real_total) / n(ed.cantidad)) * 100) / 100 : 0; } const { error } = await supabase.from("costos_variables").update(c).eq("id", ed.id); if (error) return error.message; lista.recargar(); }} />}
   </>;
 }

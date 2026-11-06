@@ -32,7 +32,7 @@ export function PanelInventario({ pid, A, M, S, zonaAlmacen }: any) {
   const filas = M.filter((m: any) => (!cat || m.categoria === cat) && (!est || estadoStock(stockDe(m), n(m.minimo))[0] === est) && (m.nombre + " " + (m.codigo || "")).toLowerCase().includes(q.toLowerCase()));
   return <>
     <div className="kpis-mini" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(138px,1fr))" }}>
-      <Mini t="Valor estimado del inventario" v={bs(valorTotal)} s="Almacén central + locales + vehículos" info="Lo que cuesta todo el material que hay hoy en todos los almacenes, al costo de cada artículo." />
+      <Mini t="Valor estimado del almacén" v={bs(valorTotal)} s="Almacén central + locales + vehículos" info="Lo que cuesta todo el material que hay hoy en todos los almacenes, al costo de cada artículo." />
       <Mini t="Productos disponibles" v={disponibles} s={`de ${M.length} en catálogo`} info="Artículos con stock en algún almacén." clase="ok" />
       <Mini t="Stock bajo" v={bajos} s={bajos ? "Por debajo del mínimo" : "Ninguno"} info="Artículos cuyo total está por debajo del mínimo que definiste." clase={bajos ? "warn" : ""} />
       <Mini t="Agotados" v={agotados} s={agotados ? "Sin stock" : "Ninguno"} info="Artículos sin ninguna unidad en ningún almacén." clase={agotados ? "bad" : ""} />

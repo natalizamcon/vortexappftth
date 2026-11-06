@@ -69,7 +69,7 @@ function Materiales({ pid, A, M, S, recargar }: any) {
 
     {panel?.t === "comprar" && <Drawer titulo={"Comprar · " + panel.m.nombre} onClose={() => setPanel(null)}><FormIngreso A={A} M={M} S={S} almacenInicial={alm} materialInicial={panel.m.id} onListo={recargar} /></Drawer>}
     {panel?.t === "quitar" && <Drawer titulo={"Quitar · " + panel.m.nombre} onClose={() => setPanel(null)}><FormQuitar m={panel.m} A={A} S={S} almInicial={alm} onListo={() => { recargar(); }} /></Drawer>}
-    {panel?.t === "facturas" && <Drawer titulo={"Facturas · " + panel.m.nombre} onClose={() => setPanel(null)}><FacturasMaterial m={panel.m} A={A} /></Drawer>}
+    {panel?.t === "facturas" && <Drawer titulo={"Compras y facturas · " + panel.m.nombre} onClose={() => setPanel(null)}><FacturasMaterial m={panel.m} A={A} /></Drawer>}
     {ed && <FormModal titulo={"Editar · " + ed.nombre} valores={ed} onClose={() => setEd(null)} campos={[{ k: "nombre", l: "Nombre", req: true }, { k: "categoria", l: "Categoría" }, { k: "unidad", l: "Unidad", req: true }, { k: "marca", l: "Marca" }, { k: "modelo", l: "Modelo" }, { k: "proveedor", l: "Proveedor" }]}
       onGuardar={async v => { const { error } = await supabase.from("materiales").update(v).eq("id", ed.id); if (error) return /duplicate key|unique/i.test(error.message) ? "Ya existe un material con ese nombre." : error.message; recargar(); }} />}
   </>;
@@ -104,7 +104,7 @@ function EquipoDesdeFoto({ pid, A, onListo }: { pid: string; A: any[]; onListo: 
       const ruta = foto ? await subirArchivo("fotos", pid, foto) : null;
       const { error } = await supabase.from("equipos_serie").insert({ proyecto_id: pid, serie: f.serie.trim(), modelo: f.modelo.trim() || null, mac: f.mac.trim() || null, estado: "ALMACEN", almacen_id: f.almacen || null, foto_path: ruta, proveedor: "Digicorp" });
       if (error) throw new Error(/duplicate key|unique/i.test(error.message) ? "Ya existe un equipo con ese número de serie." : error.message);
-      setOk("Equipo guardado en el inventario."); setF({ ...f, serie: "", modelo: "", mac: "" }); setFoto(null); setK(x => x + 1); onListo();
+      setOk("Equipo guardado en el almacén."); setF({ ...f, serie: "", modelo: "", mac: "" }); setFoto(null); setK(x => x + 1); onListo();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };

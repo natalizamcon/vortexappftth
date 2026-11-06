@@ -8,8 +8,8 @@ import { MaterialesEquipos } from "./InventarioMateriales";
 
 const orden = (a: any) => (a.tipo === "central" ? 0 : a.tipo === "zona" ? 1 : 2);
 
-/** Inventario: cada proyecto tiene su almacén central, un almacén por zona y uno de vehículo / técnico. */
-export default function Inventario() {
+/** Almacén: cada proyecto tiene su almacén central, un almacén por zona y uno de vehículo / técnico. */
+export default function Almacén() {
   const { zonas, zonaId } = useApp(), zona = zonas.find(z => z.id === zonaId), pid = useProyecto() || zona?.proyecto_id || "";
   const [tab, setTab] = useState("almacenes");
   const alm = useQuery(() => pid ? supabase.from("almacenes").select("*").eq("proyecto_id", pid) : Promise.resolve({ data: [], error: null }), [pid]);
@@ -20,9 +20,9 @@ export default function Inventario() {
   const recargar = () => { alm.recargar(); mat.recargar(); stk.recargar(); eqs.recargar(); };
   const props = { pid, A, M, S, E: ((eqs.data as any[]) || []), recargar, zonaAlmacen: A.find(a => a.zona_id === zonaId)?.id || "" };
   return <>
-    <h1>Inventario</h1>
-    <Tabs items={[["almacenes", "Almacenes"], ["panel", "Panel de inventario"], ["materiales", "Materiales y equipos"]]} valor={tab} onChange={setTab} />
-    {!pid ? <Aviso>Elige un <b>proyecto</b> o una <b>zona</b> arriba para ver su inventario.</Aviso> : alm.loading || mat.loading || stk.loading ? <Cargando /> : alm.error || mat.error ? <Aviso tipo="mal">{alm.error || mat.error}</Aviso> : <>
+    <h1>Almacén</h1>
+    <Tabs items={[["almacenes", "Almacenes"], ["panel", "Panel del almacén"], ["materiales", "Materiales y equipos"]]} valor={tab} onChange={setTab} />
+    {!pid ? <Aviso>Elige un <b>proyecto</b> o una <b>zona</b> arriba para ver su almacén.</Aviso> : alm.loading || mat.loading || stk.loading ? <Cargando /> : alm.error || mat.error ? <Aviso tipo="mal">{alm.error || mat.error}</Aviso> : <>
       {tab === "almacenes" && <Almacenes {...props} />}{tab === "panel" && <PanelInventario {...props} />}{tab === "materiales" && <MaterialesEquipos {...props} />}</>}
   </>;
 }

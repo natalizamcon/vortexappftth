@@ -7,12 +7,15 @@ import { LectorFoto } from "../lib/LectorFoto";
 import { BotonGPS } from "../lib/BotonGPS";
 import { EscanerFormulario } from "../lib/EscanerFormulario";
 import { aNumero, coincidir, norm } from "../lib/coincidir";
+import { SelectorFotos, subirFotos, GaleriaFotos, FotosElegidas } from "./FotosInstalacion";
+import { SLOTS_FOTOS, contarFotos } from "../lib/fotos";
 import type { Accion } from "./Servicios";
 
 const n = (x: any) => Number(x) || 0;
 const F0 = { nombre: "", ci: "", telefono: "", ref_nombre: "", ref_tel: "", direccion: "", gps: "", plan_id: "", nap_id: "", puerto: "", equipo_id: "", equipo: "", serie: "", mac: "", ip: "", potencia: "", usuario_tecnico: "", clave_tecnica: "", tecnico: "", fecha: hoy(), precio_instalacion: "0", costo_materiales: "", mano_obra: "", observaciones: "" };
 
 export function Instalaciones({ accion }: { accion: Accion }) {
+  const [gal, setGal] = useState<any>(null);
   const { zonas, zonaId, proyectoId } = useApp(), al = useAlcance(), zona = zonas.find(z => z.id === zonaId);
   const lista = useQuery(() => al(supabase.from("v_instalaciones_lista").select("*").order("fecha", { ascending: false }).order("codigo", { ascending: false }).limit(1000)), [proyectoId, zonaId]);
   const [abrir, setAbrir] = useState(false), [orden, setOrden] = useState<any>(null), [foto, setFoto] = useState<File | null>(null);
@@ -20,13 +23,15 @@ export function Instalaciones({ accion }: { accion: Accion }) {
   const L: any[] = (lista.data as any[]) || [];
   return <>
     <div className="fila" style={{ marginBottom: 10 }}>{zona ? <label className="btn mor" style={{ cursor: "pointer" }}>📷 Escanear hoja de instalación<input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { setOrden(null); setFoto(f); setAbrir(true); } e.target.value = ""; }} /></label> : <button className="btn mor" disabled title="Elige una zona arriba">📷 Escanear hoja de instalación</button>}<button className="btn" disabled={!zona} onClick={() => { setOrden(null); setFoto(null); setAbrir(true); }} title={zona ? "" : "Elige una zona arriba"}>+ Nueva instalación (a mano)</button>{!zona && <span className="mute">Elige una zona arriba para registrar una instalación.</span>}</div>
-    <div className="card tw">{lista.loading ? <Cargando /> : lista.error ? <Aviso tipo="mal">{lista.error}</Aviso> : L.length ? <table><thead><tr><th>Código</th><th>Cliente</th><th>C.I.</th><th>NAP / puerto</th><th>Técnico</th><th>Fecha</th><th>Formulario</th></tr></thead>
-      <tbody>{L.map(x => <tr key={x.id}><td>{x.codigo}</td><td><b>{x.cliente_nombre || "—"}</b></td><td>{x.cliente_ci || "—"}</td><td>{x.nap_codigo ? `${x.nap_codigo} / ${x.puerto_numero ?? "—"}` : "—"}</td><td>{x.tecnico || "—"}</td><td>{x.fecha}</td><td>{x.formulario_path ? <button className="btn suave chico" onClick={async () => { const u = await urlArchivo("fotos", x.formulario_path); if (u) window.open(u, "_blank"); }}>Ver formulario</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay instalaciones registradas.</Vacio>}</div>
+    <div className="card tw">{lista.loading ? <Cargando /> : lista.error ? <Aviso tipo="mal">{lista.error}</Aviso> : L.length ? <table><thead><tr><th>Código</th><th>Cliente</th><th>C.I.</th><th>NAP / puerto</th><th>Técnico</th><th>Fecha</th><th>Fotos</th><th>Formulario</th></tr></thead>
+      <tbody>{L.map(x => <tr key={x.id}><td>{x.codigo}</td><td><b>{x.cliente_nombre || "—"}</b></td><td>{x.cliente_ci || "—"}</td><td>{x.nap_codigo ? `${x.nap_codigo} / ${x.puerto_numero ?? "—"}` : "—"}</td><td>{x.tecnico || "—"}</td><td>{x.fecha}</td><td><button className="btn suave chico" onClick={() => setGal(x)}>📷 {contarFotos(x.fotos)}/5</button></td><td>{x.formulario_path ? <button className="btn suave chico" onClick={async () => { const u = await urlArchivo("fotos", x.formulario_path); if (u) window.open(u, "_blank"); }}>Ver formulario</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay instalaciones registradas.</Vacio>}</div>
+    {gal && <GaleriaFotos instalacion={{ id: gal.id, proyecto_id: gal.proyecto_id, fotos: gal.fotos || {} }} titulo={`Fotos · ${gal.cliente_nombre || gal.codigo}`} onClose={() => setGal(null)} onCambio={() => lista.recargar()} />}
     {abrir && zona && <FormInstalacion zona={zona} orden={orden} archivoInicial={foto} onClose={() => setAbrir(false)} onListo={() => { setAbrir(false); lista.recargar(); }} />}
   </>;
 }
 
 function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zona: any; orden: any; archivoInicial?: File | null; onClose: () => void; onListo: () => void }) {
+  const yoAdmin = useApp().perfil?.rol === "admin", [fotosInst, setFotosInst] = useState<FotosElegidas>({}), [progreso, setProgreso] = useState("");
   const [f, setF] = useState<any>({ ...F0, nombre: orden && !orden.cliente_id ? orden.referencia || "" : "", tecnico: orden?.tecnico || "" }), [msg, setMsg] = useState(""), [ocup, setOcup] = useState(false), [otroPuerto, setOtroPuerto] = useState(false), [otroTec, setOtroTec] = useState(false), [formFile, setFormFile] = useState<File | null>(null), [avisos, setAvisos] = useState<string[]>([]);
   const gpsAuto = useRef("");
   const planes = useQuery(() => supabase.from("planes").select("*").eq("zona_id", zona.id).eq("activo", true).order("precio"), [zona.id]);
@@ -60,12 +65,19 @@ function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zo
     setMsg("");
     if (!f.nombre.trim() || !f.plan_id || !f.nap_id || !puerto) return setMsg("Faltan datos: nombre, plan, NAP y un puerto libre.");
     let lat: any = "", lng: any = ""; if (f.gps.trim()) { const p = f.gps.split(/[,;\s]+/).filter(Boolean); if (p.length !== 2 || isNaN(+p[0]) || isNaN(+p[1])) return setMsg("Las coordenadas deben verse así: -17.39, -66.15"); [lat, lng] = p; }
+    const sinFoto = SLOTS_FOTOS.filter(s => !fotosInst[s.k]).map(s => s.t);
+    if (sinFoto.length) { if (!yoAdmin) return setMsg(`Faltan fotos: ${sinFoto.join(", ")}. Son 5 fotos y con ellas queda registrada la instalación.`); if (!confirm(`Faltan ${sinFoto.length} de las 5 fotos (${sinFoto.join(", ")}). ¿Registrar la instalación igual? Podrás agregarlas después desde la lista de instalaciones.`)) return; }
     setOcup(true);
     try {
       let rutaHoja: string | null = null; if (formFile) { try { rutaHoja = await subirArchivo("fotos", zona.proyecto_id, formFile); } catch { /* la instalación igual se guarda */ } }
       const { data, error } = await supabase.rpc("crear_cliente_instalacion", { p: { ...f, lat, lng, puerto, zona_id: zona.id } }); if (error) throw new Error(error.message);
       const id = data as any;
       if (rutaHoja) await supabase.from("instalaciones").update({ formulario_path: rutaHoja }).eq("cliente_id", id);
+      if (Object.values(fotosInst).some(Boolean)) {
+        const { rutas, fallaron } = await subirFotos(zona.proyecto_id, fotosInst, setProgreso); setProgreso("");
+        if (Object.keys(rutas).length) { const { error: ef } = await supabase.from("instalaciones").update({ fotos: rutas }).eq("cliente_id", id); if (ef) alert("La instalación se registró, pero no se pudieron guardar las fotos: " + (/fotos/i.test(ef.message) ? "falta correr en Supabase el archivo 30_dinero_disponible.sql" : ef.message) + ". Agrégalas después desde la lista de instalaciones."); }
+        if (fallaron) alert(`La instalación se registró, pero ${fallaron} foto(s) no se pudieron subir (¿poca señal?). Agrégalas después desde la lista de instalaciones, con el botón 📷.`);
+      }
       if (f.equipo_id) await supabase.from("equipos_serie").update({ estado: "INSTALADO", cliente_id: id }).eq("id", f.equipo_id);
       if (f.costo_materiales !== "" || f.mano_obra !== "") await supabase.from("instalaciones").update({ costo_materiales: n(f.costo_materiales), mano_obra: n(f.mano_obra) }).eq("cliente_id", id);
       if (orden) await supabase.from("ordenes_trabajo").update({ estado: "COMPLETADA", cerrado_en: new Date().toISOString(), resultado_id: id, cliente_id: id }).eq("id", orden.id);
@@ -88,9 +100,11 @@ function FormInstalacion({ zona, orden, archivoInicial, onClose, onListo }: { zo
       {otroPuerto && L.length > 1 && <select value={puerto} onChange={e => set("puerto", e.target.value)}>{L.map(p => <option key={p.numero}>{p.numero}</option>)}</select>}
       <Campo l="Equipo"><select value={f.equipo_id} onChange={e => elegirEquipo(e.target.value)}><option value="">Otro (lo escribo abajo)</option>{((equipos.data as any[]) || []).map(x => <option key={x.id} value={x.id}>{x.modelo || "Equipo"} · {x.serie}</option>)}</select></Campo>
       <LectorFoto tipo="etiqueta_equipo" titulo="Leer la etiqueta del equipo con foto" onUsar={d => setF((x: any) => ({ ...x, serie: d.serie || x.serie, mac: d.mac || x.mac, equipo: x.equipo_id ? x.equipo : d.modelo || x.equipo }))} />
-      {!f.equipo_id && T("Modelo del equipo", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}<LectorFoto tipo="potencia" titulo="Leer la potencia con foto del medidor" onUsar={d => d.potencia_dbm !== null && d.potencia_dbm !== undefined && set("potencia", String(d.potencia_dbm))} />{T("Potencia óptica", "potencia")}{T("Usuario técnico", "usuario_tecnico")}{T("Contraseña técnica", "clave_tecnica")}
+      {!f.equipo_id && T("Modelo del equipo", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}<LectorFoto tipo="potencia" titulo="Leer la potencia con foto del medidor" onUsar={d => d.potencia_dbm !== null && d.potencia_dbm !== undefined && set("potencia", String(d.potencia_dbm))} />{T("Potencia óptica", "potencia")}{T("Nombre de la red", "usuario_tecnico")}{T("Contraseña de usuario", "clave_tecnica")}
       <Campo l="Técnico">{otroTec || !((tecnicos.data as any[]) || []).length ? <input value={f.tecnico} onChange={e => set("tecnico", e.target.value)} placeholder="Nombre del técnico" /> : <select value={f.tecnico} onChange={e => e.target.value === "__otro" ? (setOtroTec(true), set("tecnico", "")) : set("tecnico", e.target.value)}><option value="">Elige…</option>{((tecnicos.data as any[]) || []).map(x => <option key={x.nombre}>{x.nombre}</option>)}<option value="__otro">Otro (escribir)</option></select>}</Campo>
       {T("Fecha de instalación", "fecha", "date")}{T("Precio de instalación (Bs)", "precio_instalacion", "number")}{T("Costo de materiales (Bs, opcional)", "costo_materiales", "number")}{T("Mano de obra (Bs, opcional)", "mano_obra", "number")}{T("Observaciones", "observaciones")}</div>
+    <SelectorFotos fotos={fotosInst} onChange={setFotosInst} />
+    {progreso && <p className="mute">{progreso}</p>}
     <p className="mute">El primer mes se cobra proporcional a los días reales hasta el corte de la zona.</p>
     <button className="btn" style={{ width: "100%" }} disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Registrar instalación"}</button></Drawer>;
 }

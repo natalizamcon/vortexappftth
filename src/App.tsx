@@ -22,7 +22,7 @@ import Agenda, { ContadorAgenda } from "./pages/Agenda";
 import { AvisosAgenda } from "./pages/AvisosAgenda";
 
 const RUTAS: [string, string, string | null][] = [
-  ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Inventario", "inventario"],
+  ["dashboard", "Dashboard", null], ["red", "Red", "red"], ["clientes", "Clientes", "clientes"], ["servicios", "Instalaciones y servicios", "instalaciones"], ["inventario", "Almacén", "inventario"],
   ["finanzas", "Finanzas", "finanzas"], ["formularios", "Formularios", "formularios"], ["agenda", "Agenda", null], ["alertas", "Centro de alertas", null], ["reportes", "Reportes", "reportes"], ["configuracion", "Configuración", "__admin"],
 ];
 const MODULO_RUTA: Record<string, string> = { red: "red", clientes: "clientes", cobranzas: "cobranzas", servicios: "instalaciones", campo: "instalaciones", inventario: "inventario", finanzas: "finanzas", formularios: "formularios", reportes: "reportes" };

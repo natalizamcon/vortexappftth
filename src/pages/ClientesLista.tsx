@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { GaleriaFotos } from "./FotosInstalacion";
+import { contarFotos } from "../lib/fotos";
 import { supabase, urlArchivo } from "../lib/supabase";
 import { EliminarCliente } from "./ClientesEliminar";
 import { useApp } from "../lib/auth";
@@ -55,9 +57,10 @@ export function ListaClientes({ filtroInicial }: { filtroInicial?: string }) {
 function Dato({ l, v }: { l: string; v: any }) { return <><dt>{l}</dt><dd>{v === null || v === undefined || v === "" ? "—" : v}</dd></>; }
 
 function Ficha({ c, cuenta, comp, tecnico, verCobranza, onClose, onCambio, onPago, onHist, onBaja }: any) {
+  const [fotos, setFotos] = useState(false);
   const { perfil: yo } = useApp(), soyDueno = yo?.rol === "admin" && (yo?.rol_clave || "admin") === "admin", [elim, setElim] = useState(false);
   const [conf, setConf] = useState(!!c.problematico), [nota, setNota] = useState(c.motivo_problematico || ""), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
-  const k = cr(c.clientes_credenciales), cc = comportamiento(comp, conf), hoja = useQuery(() => supabase.from("instalaciones").select("formulario_path, fecha").eq("cliente_id", c.id).order("fecha", { ascending: false }).limit(1), [c.id]), rutaHoja = ((hoja.data as any[]) || [])[0]?.formulario_path;
+  const k = cr(c.clientes_credenciales), cc = comportamiento(comp, conf), hoja = useQuery(() => supabase.from("instalaciones").select("id, proyecto_id, formulario_path, fotos, fecha").eq("cliente_id", c.id).order("fecha", { ascending: false }).limit(1), [c.id]), rutaHoja = ((hoja.data as any[]) || [])[0]?.formulario_path;
   const guardar = async () => {
     setMsg(""); setOk(""); if (conf && !nota.trim()) return setMsg("Escribe por qué es un usuario conflictivo.");
     setOcup(true); const { error } = await supabase.from("clientes").update({ problematico: conf, motivo_problematico: conf ? nota.trim() : null }).eq("id", c.id); setOcup(false);
@@ -73,12 +76,13 @@ function Ficha({ c, cuenta, comp, tecnico, verCobranza, onClose, onCambio, onPag
     <h3 className="ficha-sec">Datos personales</h3><dl className="ficha"><Dato l="C.I." v={c.ci} /><Dato l="Teléfono" v={c.telefono} /><Dato l="Referencia" v={c.referencia_nombre ? c.referencia_nombre + (c.referencia_tel ? " · " + c.referencia_tel : "") : null} /><Dato l="Ubicación" v={c.direccion} />
       <Dato l="GPS" v={c.lat != null && c.lng != null ? <>{c.lat}, {c.lng} · <a href={`https://www.google.com/maps?q=${c.lat},${c.lng}`} target="_blank" rel="noreferrer">Abrir en Google Maps</a></> : null} /><Dato l="Observaciones" v={c.observaciones} /></dl>
     <h3 className="ficha-sec">Servicio</h3><dl className="ficha"><Dato l="Zona" v={c.zonas?.nombre} /><Dato l="NAP / Puerto" v={c.naps?.codigo ? `${c.naps.codigo} / ${c.puertos?.numero ?? "—"}` : null} /><Dato l="Plan" v={`${c.plan_nombre || "—"} ${c.mbps || ""} Mbps`} /><Dato l="Mensualidad" v={bs(c.precio_mensual)} />
-      <Dato l="Instalación" v={c.fecha_instalacion} /><Dato l="Precio de instalación" v={bs(c.precio_instalacion)} /><Dato l="Técnico" v={tecnico} /><Dato l="Hoja de instalación" v={rutaHoja ? <button className="btn suave chico" onClick={async () => { const u = await urlArchivo("fotos", rutaHoja); if (u) window.open(u, "_blank"); }}>Ver la hoja firmada</button> : null} />{c.fecha_baja && <Dato l="Fecha de baja" v={c.fecha_baja} />}</dl>
-    <h3 className="ficha-sec">Equipo y datos técnicos</h3><dl className="ficha"><Dato l="Equipo" v={k.equipo} /><Dato l="Serie" v={k.serie} /><Dato l="MAC" v={k.mac} /><Dato l="IP" v={k.ip} /><Dato l="Potencia" v={k.potencia} /><Dato l="Usuario técnico" v={k.usuario_tecnico} /><Dato l="Contraseña" v={k.clave_tecnica} /></dl>
+      <Dato l="Instalación" v={c.fecha_instalacion} /><Dato l="Precio de instalación" v={bs(c.precio_instalacion)} /><Dato l="Técnico" v={tecnico} /><Dato l="Fotos de la instalación" v={<button className="btn suave chico" onClick={() => setFotos(true)}>📷 Ver y completar ({contarFotos(((hoja.data as any[]) || [])[0]?.fotos)}/5)</button>} /><Dato l="Hoja de instalación" v={rutaHoja ? <button className="btn suave chico" onClick={async () => { const u = await urlArchivo("fotos", rutaHoja); if (u) window.open(u, "_blank"); }}>Ver la hoja firmada</button> : null} />{c.fecha_baja && <Dato l="Fecha de baja" v={c.fecha_baja} />}</dl>
+    <h3 className="ficha-sec">Equipo y datos técnicos</h3><dl className="ficha"><Dato l="Equipo" v={k.equipo} /><Dato l="Serie" v={k.serie} /><Dato l="MAC" v={k.mac} /><Dato l="IP" v={k.ip} /><Dato l="Potencia" v={k.potencia} /><Dato l="Nombre de la red" v={k.usuario_tecnico} /><Dato l="Contraseña de usuario" v={k.clave_tecnica} /></dl>
     {verCobranza && cuenta && <><h3 className="ficha-sec">Cuenta</h3><dl className="ficha"><Dato l="Debe" v={bs(cuenta.deuda) + (n0(cuenta.meses_deuda) ? ` (${cuenta.meses_deuda} mes${n0(cuenta.meses_deuda) === 1 ? "" : "es"})` : "")} /><Dato l="Último pago" v={cuenta.ultimo_pago} />
       <Dato l="Comportamiento" v={comp && n0(comp.cargos_vencidos) ? `${comp.a_tiempo} de ${comp.cargos_vencidos} meses pagados a tiempo${n0(comp.tarde) ? `, ${comp.tarde} tarde` : ""}${n0(comp.impagos) ? `, ${comp.impagos} sin pagar` : ""}` : "Aún sin meses vencidos"} />
       {c.no_cortar && <Dato l="No cortar" v={"Sí" + (c.no_cortar_hasta ? " hasta " + c.no_cortar_hasta : "") + (c.motivo_estado ? " · " + c.motivo_estado : "")} />}{c.estado === "SUSPENDIDO" && <Dato l="Suspendido por" v={c.motivo_estado} />}</dl></>}
     <div className="fila" style={{ marginTop: 14 }}>{verCobranza && cuenta && c.estado !== "BAJA" && <button className="btn" onClick={onPago}>Registrar pago</button>}{verCobranza && cuenta && <button className="btn suave" onClick={onHist}>Historial de pagos</button>}{c.estado !== "BAJA" && <button className="btn suave" onClick={onBaja}>Dar de baja</button>}</div>
+    {fotos && ((hoja.data as any[]) || [])[0] && <GaleriaFotos instalacion={{ id: ((hoja.data as any[]) || [])[0].id, proyecto_id: ((hoja.data as any[]) || [])[0].proyecto_id, fotos: ((hoja.data as any[]) || [])[0].fotos || {} }} titulo={`Fotos · ${c.nombre}`} onClose={() => setFotos(false)} onCambio={() => hoja.recargar()} />}
     {soyDueno && <div style={{ marginTop: 20, paddingTop: 10, borderTop: "1px dashed var(--bad)" }}><small className="mute">Solo el administrador principal ve esta opción.</small><div style={{ marginTop: 6 }}><button className="btn suave" style={{ color: "var(--bad)" }} onClick={() => setElim(true)}>🗑 Eliminar este cliente…</button></div></div>}
     {elim && <EliminarCliente c={c} onClose={() => setElim(false)} onListo={() => { setElim(false); onCambio(); onClose(); }} />}
   </Drawer>;
@@ -105,7 +109,7 @@ function Instalacion({ onClose, onListo }: any) {
       <Campo l="NAP *"><select value={f.nap_id} onChange={e => setF({ ...f, nap_id: e.target.value, puerto: "" })}><option value="">Elige…</option>{((naps.data as any[]) || []).map(n => <option key={n.id} value={n.id}>{n.codigo} ({n.tipo})</option>)}</select></Campo>
       <Campo l="Puerto libre *"><select value={f.puerto} onChange={e => set("puerto", e.target.value)}><option value="">{f.nap_id ? "Elige…" : "Primero elige la NAP"}</option>{((libres.data as any[]) || []).map(p => <option key={p.numero}>{p.numero}</option>)}</select></Campo>
       {T("Fecha de instalación", "fecha", "date")}{T("Precio de instalación (Bs)", "precio_instalacion", "number")}{T("Técnico", "tecnico")}</div>
-    <h3>Equipo y datos técnicos</h3><div className="form">{T("Equipo (modelo)", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}{T("Potencia óptica", "potencia")}{T("Usuario técnico", "usuario_tecnico")}{T("Contraseña técnica", "clave_tecnica")}{T("Observaciones", "observaciones")}</div>
+    <h3>Equipo y datos técnicos</h3><div className="form">{T("Equipo (modelo)", "equipo")}{T("Número de serie", "serie")}{T("MAC", "mac")}{T("IP", "ip")}{T("Potencia óptica", "potencia")}{T("Nombre de la red", "usuario_tecnico")}{T("Contraseña de usuario", "clave_tecnica")}{T("Observaciones", "observaciones")}</div>
     <p className="mute">El primer mes se cobra proporcional a los días reales hasta el corte de la zona.</p><button className="btn" disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Registrar instalación"}</button></Modal>;
 }
 

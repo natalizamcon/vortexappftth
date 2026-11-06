@@ -2,7 +2,8 @@ import { useState } from "react";
 import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { Aviso, Campo, Cargando, Vacio, bs, useQuery } from "../lib/ui";
 import { useApp } from "../lib/auth";
-import { FuenteDinero, FuenteElegida, SIN_FUENTE, precomprobarFuente, registrarGastoFuente } from "../lib/FuenteDinero";
+import { FuenteDinero, FuenteElegida, SIN_FUENTE, fuenteParaGuardar, precomprobarFuente, traducirErrorFuente } from "../lib/FuenteDinero";
+import { rotuloFuente } from "../lib/fondo";
 
 const n = (x: any) => Number(x) || 0;
 export const PROVEEDORES = ["Digicorp", "Entel", "Tigo", "Viva", "Otro"];
@@ -23,9 +24,10 @@ export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo 
     if (verFuente) { const e = await precomprobarFuente(fuente, total, m.proyecto_id, zonaDest); if (e) return setMsg(e); }
     setOcup(true);
     let ruta: string | null = null; try { if (fact) ruta = await subirArchivo("comprobantes", m.proyecto_id, fact); } catch (e: any) { setOcup(false); return setMsg(e.message); }
-    const { error } = await supabase.rpc("registrar_compra", { p_material: m.id, p_almacen: f.almacen, p_cantidad: cant, p_precio: precio, p_proveedor: f.proveedor || null, p_ref: null, p_factura: ruta }); setOcup(false);
-    if (error) return setMsg(error.message);
-    let fin = ""; if (verFuente) { const e2 = await registrarGastoFuente({ proyecto_id: m.proyecto_id, zona_id: zonaDest, categoria: m.categoria || "Materiales y equipos", descripcion: `Compra de ${cant} ${m.unidad} de ${m.nombre}`, monto: total, fuente, comprobante_path: ruta }); fin = e2 ? ` ⚠ Entró al inventario, pero no se pudo registrar en finanzas: ${e2} Regístralo en Finanzas → Ingresos y gastos.` : fuente.fuente === "NO" ? "" : ` Registrado en Finanzas (${fuente.fuente === "Otra fuente" ? "otra fuente" : fuente.fuente.toLowerCase()}).`; }
+    const fu = verFuente ? fuenteParaGuardar(fuente) : { fuente: null, fuente_detalle: null };
+    const { error } = await supabase.rpc("registrar_compra", { p_material: m.id, p_almacen: f.almacen, p_cantidad: cant, p_precio: precio, p_proveedor: f.proveedor || null, p_ref: null, p_factura: ruta, ...(fu.fuente ? { p_fuente: fu.fuente, p_fuente_detalle: fu.fuente_detalle } : {}) }); setOcup(false);
+    if (error) return setMsg(traducirErrorFuente(error.message));
+    const fin = verFuente && fu.fuente ? ` Registrado en Finanzas con ${rotuloFuente(fu.fuente, fu.fuente_detalle).toLowerCase()}.` : "";
     setOk(`Ingresaron ${cant} ${m.unidad} de ${m.nombre} a ${precio ? bs(precio) : "precio 0"} cada una${ruta ? ", con su factura" : ""}.${fin}`); setF({ ...f, cantidad: "1" }); setFact(null); setFuente(SIN_FUENTE); onListo();
   };
   return <div className="card"><h2>Ingresar material a un almacén</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
@@ -83,8 +85,8 @@ export function Almacenes({ A, M, S, E = [], zonaAlmacen, recargar, pid }: any) 
         <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={ocup} onClick={mover}>{ocup ? "Moviendo…" : "Mover material"}</button></div></div>
     <div className="card tw"><h2>Material por almacén</h2>{M.length ? <table><thead><tr><th>Artículo</th>{A.map((a: any) => <th key={a.id}>{a.nombre}</th>)}<th>Total</th></tr></thead>
       <tbody>{M.map((m: any) => { const t = totalDe(S, m.id); return <tr key={m.id}><td>{m.nombre}</td>{A.map((a: any) => <td key={a.id} style={cantEn(S, m.id, a.id) ? { color: "var(--acct)", fontWeight: 600 } : { color: "var(--mute)" }}>{cantEn(S, m.id, a.id)}</td>)}<td><b>{t}</b></td></tr>; })}</tbody></table> : <Vacio>Aún no hay materiales. Créalos en Materiales y equipos.</Vacio>}</div>
-    <div className="card tw"><h2>Movimientos recientes</h2>{movs.loading ? <Cargando /> : ((movs.data as any[]) || []).length ? <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Desde</th><th>Hacia</th><th>Detalle</th><th>Factura</th></tr></thead>
-      <tbody>{((movs.data as any[]) || []).map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}</td><td>{x.tipo}</td><td>{x.materiales?.nombre}</td><td>{x.cantidad} {x.materiales?.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{x.origen?.nombre || "—"}</td><td>{x.destino?.nombre || "—"}</td><td>{x.proveedor ? "Proveedor " + x.proveedor : x.referencia || "—"}</td><td>{x.factura_path ? <button className="btn suave chico" onClick={() => abrirFactura(x.factura_path)}>Ver factura</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay movimientos.</Vacio>}</div>
+    <div className="card tw"><h2>Movimientos recientes</h2>{movs.loading ? <Cargando /> : ((movs.data as any[]) || []).length ? <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Desde</th><th>Hacia</th><th>Detalle</th><th>Pagado con</th><th>Factura</th></tr></thead>
+      <tbody>{((movs.data as any[]) || []).map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}</td><td>{x.tipo}</td><td>{x.materiales?.nombre}</td><td>{x.cantidad} {x.materiales?.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{x.origen?.nombre || "—"}</td><td>{x.destino?.nombre || "—"}</td><td>{x.proveedor ? "Proveedor " + x.proveedor : x.referencia || "—"}</td><td>{x.tipo === "ENTRADA" ? rotuloFuente(x.fuente, x.fuente_detalle) || <span className="mute">No indicado</span> : "—"}</td><td>{x.factura_path ? <button className="btn suave chico" onClick={() => abrirFactura(x.factura_path)}>Ver factura</button> : "—"}</td></tr>)}</tbody></table> : <Vacio>Aún no hay movimientos.</Vacio>}</div>
   </>;
 }
 
@@ -92,11 +94,11 @@ export async function abrirFactura(ruta: string) { const u = await urlArchivo("c
 
 /** Ingresos de un material con su factura: se puede ver o adjuntar si falta. */
 export function FacturasMaterial({ m, A }: { m: any; A: any[] }) {
-  const q = useQuery(() => supabase.from("movimientos").select("id, fecha, cantidad, costo_unitario, proveedor, referencia, factura_path, almacen_destino").eq("material_id", m.id).eq("tipo", "ENTRADA").order("fecha", { ascending: false }).limit(100), [m.id]);
+  const q = useQuery(() => supabase.from("movimientos").select("id, fecha, cantidad, costo_unitario, proveedor, referencia, factura_path, almacen_destino, fuente, fuente_detalle").eq("material_id", m.id).eq("tipo", "ENTRADA").order("fecha", { ascending: false }).limit(100), [m.id]);
   const [msg, setMsg] = useState("");
   const adjuntar = async (x: any, f?: File | null) => { if (!f) return; setMsg(""); try { const ruta = await subirArchivo("comprobantes", m.proyecto_id, f); const { error } = await supabase.from("movimientos").update({ factura_path: ruta }).eq("id", x.id); if (error) throw new Error(error.message); q.recargar(); } catch (e: any) { setMsg(e.message); } };
   const L: any[] = (q.data as any[]) || [];
-  return <div>{msg && <Aviso tipo="mal">{msg}</Aviso>}{q.loading ? <Cargando /> : L.length ? <table style={{ minWidth: 0 }}><thead><tr><th>Fecha</th><th>Cant.</th><th>Precio</th><th>Almacén</th><th>Factura</th></tr></thead>
-    <tbody>{L.map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}<br /><small className="mute">{x.proveedor || x.referencia || ""}</small></td><td>{x.cantidad} {m.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{A.find(a => a.id === x.almacen_destino)?.nombre || "—"}</td>
+  return <div>{msg && <Aviso tipo="mal">{msg}</Aviso>}{q.loading ? <Cargando /> : L.length ? <table style={{ minWidth: 0 }}><thead><tr><th>Fecha</th><th>Cant.</th><th>Precio</th><th>Almacén</th><th>Pagado con</th><th>Factura</th></tr></thead>
+    <tbody>{L.map(x => <tr key={x.id}><td>{String(x.fecha).slice(0, 10)}<br /><small className="mute">{x.proveedor || x.referencia || ""}</small></td><td>{x.cantidad} {m.unidad}</td><td>{x.costo_unitario != null ? bs(x.costo_unitario) : "—"}</td><td>{A.find(a => a.id === x.almacen_destino)?.nombre || "—"}</td><td>{rotuloFuente(x.fuente, x.fuente_detalle) || <span className="mute">No indicado</span>}</td>
       <td>{x.factura_path ? <button className="btn suave chico" onClick={() => abrirFactura(x.factura_path)}>Ver factura</button> : <label className="btn suave chico" style={{ cursor: "pointer" }}>Adjuntar<input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => adjuntar(x, e.target.files?.[0])} /></label>}</td></tr>)}</tbody></table> : <Vacio>Este artículo todavía no tiene ingresos registrados.</Vacio>}</div>;
 }

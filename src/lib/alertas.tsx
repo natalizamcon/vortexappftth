@@ -6,7 +6,7 @@ import { mesAnterior, rangoMes } from "./reparto";
 
 export type Prioridad = "critica" | "alta" | "media" | "baja";
 export type Nivel = "critica" | "atencion" | "info";
-export type Area = "Cobranza" | "Red" | "Operación" | "Inventario" | "Finanzas";
+export type Area = "Cobranza" | "Red" | "Operación" | "Almacén" | "Finanzas";
 export type Alerta = { id: string; tipo: string; prioridad: Prioridad; nivel: Nivel; area: Area; fecha: string; proyecto_id: string; zona_id: string | null; descripcion: string; titulo: string; detalle: string[]; ruta: string; firma: string };
 export type Revisada = { clave: string; proyecto_id: string | null; zona_id: string | null; tipo: string; prioridad: string; descripcion: string; fecha_alerta: string; firma: string; estado: "REVISADA" | "RESUELTA"; nota: string | null; usuario_nombre: string | null; fecha: string };
 export type TipoAlerta = { clave: string; nombre: string; cuando: string; prioridad: string; area: Area; roles: string[]; extra?: boolean };
@@ -23,12 +23,12 @@ export const TIPOS: TipoAlerta[] = [
   { clave: "mant_pend", nombre: "Mantenimientos pendientes", cuando: "Mantenimiento sin completar", prioridad: "Media · Alta si la fecha ya pasó", area: "Operación", roles: ["socio", "supervisor"] },
   { clave: "nap_llena", nombre: "NAP con puertos agotados", cuando: "NAP sin puertos libres", prioridad: "Alta", area: "Red", roles: ["socio", "supervisor"] },
   { clave: "puertos_dan", nombre: "Puertos dañados", cuando: "NAP con al menos un puerto dañado", prioridad: "Media", area: "Red", roles: ["socio", "supervisor"] },
-  { clave: "eq_recuperar", nombre: "Equipos pendientes de recuperación", cuando: "Baja completada con el equipo sin devolver", prioridad: "Alta", area: "Inventario", roles: ["socio", "supervisor", "almacen"] },
-  { clave: "stock_bajo", nombre: "Productos con stock bajo", cuando: "Stock bajo el mínimo", prioridad: "Media · Alta si hay agotados", area: "Inventario", roles: ["socio", "almacen"] },
-  { clave: "eq_sin_ubicacion", nombre: "Equipos sin ubicación registrada", cuando: "Equipo con serie sin ubicación", prioridad: "Media", area: "Inventario", roles: ["socio", "almacen"] },
+  { clave: "eq_recuperar", nombre: "Equipos pendientes de recuperación", cuando: "Baja completada con el equipo sin devolver", prioridad: "Alta", area: "Almacén", roles: ["socio", "supervisor", "almacen"] },
+  { clave: "stock_bajo", nombre: "Productos con stock bajo", cuando: "Stock bajo el mínimo", prioridad: "Media · Alta si hay agotados", area: "Almacén", roles: ["socio", "almacen"] },
+  { clave: "eq_sin_ubicacion", nombre: "Equipos sin ubicación registrada", cuando: "Equipo con serie sin ubicación", prioridad: "Media", area: "Almacén", roles: ["socio", "almacen"] },
   { clave: "ordenes_atrasadas", nombre: "Órdenes de trabajo atrasadas", cuando: "Orden abierta con fecha vencida", prioridad: "Alta · Crítica si son más de 3", area: "Operación", roles: ["socio", "supervisor"] },
   { clave: "inv_gasto", nombre: "Inversiones o gastos por revisar", cuando: "Inversión o gasto operativo mayor a Bs 500 sin revisar", prioridad: "Media · Alta si supera Bs 5.000", area: "Finanzas", roles: ["financiero"] },
-  { clave: "cambios_criticos", nombre: "Cambios críticos por autorizar", cuando: "Troncal a la papelera o ajuste y baja de inventario", prioridad: "Alta", area: "Finanzas", roles: [] },
+  { clave: "cambios_criticos", nombre: "Cambios críticos por autorizar", cuando: "Troncal a la papelera o ajuste y baja de almacén", prioridad: "Alta", area: "Finanzas", roles: [] },
   // ---- otras alertas que ya tenía el sistema ----
   { clave: "nocortar_venc", nombre: "“No cortar” ya vencido", cuando: "Cliente con “No cortar” cuya fecha ya pasó", prioridad: "Alta", area: "Cobranza", roles: ["socio", "cobranzas"], extra: true },
   { clave: "nocortar_prox", nombre: "“No cortar” por terminar", cuando: "“No cortar” que termina en 3 días o menos", prioridad: "Baja", area: "Cobranza", roles: ["socio", "cobranzas"], extra: true },
@@ -157,7 +157,7 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
 
         // ---------- FINANZAS ----------
         dat(finRev).forEach(x => add({ tipo: "inv_gasto", clave: "inv_gasto:" + x.id, prioridad: n(x.monto) > 5000 ? "alta" : "media", fecha: x.fecha, zona_id: x.zona_id, proyecto_id: x.proyecto_id, ruta: "finanzas", descripcion: `${x.tipo === "INVERSION" ? "Inversión (CAPEX)" : "Gasto operativo"} · ${x.categoria || x.descripcion || "sin categoría"} · ${bs(x.monto)} pendiente de revisión.` }));
-        dat(ajustes).forEach(x => add({ tipo: "cambios_criticos", clave: "cambio_inv:" + x.id, prioridad: "alta", fecha: String(x.fecha).slice(0, 10), proyecto_id: x.proyecto_id, ruta: "inventario", descripcion: `Inventario: ${x.tipo === "BAJA" ? "baja" : x.tipo === "AJUSTE_NEGATIVO" ? "ajuste hacia abajo" : "ajuste hacia arriba"} de ${n(x.cantidad)} ${x.materiales?.unidad || ""} de ${x.materiales?.nombre || "un material"} por autorizar.` }));
+        dat(ajustes).forEach(x => add({ tipo: "cambios_criticos", clave: "cambio_inv:" + x.id, prioridad: "alta", fecha: String(x.fecha).slice(0, 10), proyecto_id: x.proyecto_id, ruta: "inventario", descripcion: `Almacén: ${x.tipo === "BAJA" ? "baja" : x.tipo === "AJUSTE_NEGATIVO" ? "ajuste hacia abajo" : "ajuste hacia arriba"} de ${n(x.cantidad)} ${x.materiales?.unidad || ""} de ${x.materiales?.nombre || "un material"} por autorizar.` }));
         dat(papelera).filter(x => x.tabla === "troncales" && String(x.eliminado_en).slice(0, 10) >= mas(-30)).forEach(x => add({ tipo: "cambios_criticos", clave: "cambio_tron:" + x.id, prioridad: "alta", fecha: String(x.eliminado_en).slice(0, 10), proyecto_id: x.proyecto_id, ruta: "papelera", descripcion: `Troncal ${x.datos?.codigo || ""} mandada a la papelera${x.eliminado_por ? " por " + x.eliminado_por : ""}: por autorizar.` }));
 
         const pagado: Record<string, number> = {}; dat(pinv).forEach(p => { pagado[p.inversor_id] = (pagado[p.inversor_id] || 0) + n(p.monto); });

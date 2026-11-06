@@ -3,6 +3,8 @@ import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { aPapelera } from "../lib/papelera";
 import { Aviso, Campo, Cargando, Kpi, Modal, Vacio, bs, hoy, useQuery } from "../lib/ui";
+import { FuenteDinero, FuenteElegida, SIN_FUENTE, fuenteParaGuardar, precomprobarFuente, traducirErrorFuente } from "../lib/FuenteDinero";
+import { rotuloFuente } from "../lib/fondo";
 import { FONDOS, METODOS, CostoComp, Metodo, calcular, cuotaCostoCompartido, mesAnterior, r2, rangoMes } from "../lib/reparto";
 
 const n = (x: any) => Number(x) || 0;
@@ -293,6 +295,8 @@ function FormCosto({ costo, zonas, zonasCosto, clientes, onClose, onListo }: any
 /* ======================================================================= */
 const CATEGORIAS = ["Contador", "Oficina", "Publicidad", "Impuestos", "Software", "Movilidad", "Sueldos administrativos", "Otros"];
 export function GastosEmpresa() {
+  const { proyectos, proyectoId: proyActual } = useApp(), [origen, setOrigen] = useState<"mios" | "inversores">("mios"), [fuente, setFuente] = useState<FuenteElegida>(SIN_FUENTE), [proyG, setProyG] = useState(proyActual || "");
+  const proyEf = proyG || proyActual || (proyectos.length === 1 ? proyectos[0].id : "");
   const [mes, setMes] = useState(hoy().slice(0, 7)), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [arch, setArch] = useState<File | null>(null);
   const [ini, fin] = rangoMes(mes || hoy().slice(0, 7));
   const vacio = { fecha: hoy(), categoria: "Otros", concepto: "", monto: "", pagado_desde: "Fuera de los fondos", nota: "" }, [f, setF] = useState(vacio);
@@ -304,11 +308,16 @@ export function GastosEmpresa() {
   const guardar = async () => {
     setMsg(""); setOk("");
     if (!f.concepto.trim()) return setMsg("Escribe el concepto del gasto."); if (!(n(f.monto) > 0)) return setMsg("Escribe un monto mayor a 0.");
+    if (origen === "inversores") {
+      if (!proyEf) return setMsg("Elige el proyecto del que sale el dinero."); if (!fuente.fuente || fuente.fuente === "NO") return setMsg("Elige de dónde sale el dinero del gasto.");
+      const e = await precomprobarFuente(fuente, n(f.monto), proyEf, fuente.zona || null, f.fecha); if (e) return setMsg(e);
+    }
     setOcup(true);
     try {
       const ruta = arch ? await subirArchivo("comprobantes", "empresa", arch) : null;
-      const { error } = await supabase.rpc("registrar_gasto_empresa", { p: { ...f, monto: n(f.monto), comprobante_path: ruta } }); if (error) throw new Error(error.message);
-      setF(vacio); setArch(null); setOk("Gasto registrado."); gastos.recargar();
+      const ext = origen === "inversores" ? (() => { const u = fuenteParaGuardar(fuente); return { pagado_desde: "Fuera de los fondos", fuente: u.fuente, fuente_detalle: u.fuente_detalle, proyecto_id: proyEf, zona_id: fuente.zona || null }; })() : {};
+      const { error } = await supabase.rpc("registrar_gasto_empresa", { p: { ...f, ...ext, monto: n(f.monto), comprobante_path: ruta } }); if (error) throw new Error(traducirErrorFuente(error.message));
+      setF(vacio); setArch(null); setFuente(SIN_FUENTE); setOk("Gasto registrado" + (origen === "inversores" ? ` con dinero de: ${rotuloFuente(fuente.fuente, fuente.detalle).toLowerCase()}.` : ".")); gastos.recargar();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
@@ -324,13 +333,16 @@ export function GastosEmpresa() {
       <Campo l="Categoría"><input list="cat-empresa" value={f.categoria} onChange={e => setF({ ...f, categoria: e.target.value })} /><datalist id="cat-empresa">{CATEGORIAS.map(c => <option key={c} value={c} />)}</datalist></Campo>
       <Campo l="Concepto *"><input value={f.concepto} onChange={e => setF({ ...f, concepto: e.target.value })} /></Campo>
       <Campo l="Monto (Bs) *"><input type="number" min={0} step={0.01} value={f.monto} onChange={e => setF({ ...f, monto: e.target.value })} /></Campo>
-      <Campo l="¿De dónde salió el dinero?"><select value={f.pagado_desde} onChange={e => setF({ ...f, pagado_desde: e.target.value })}>{[...FONDOS, "Fuera de los fondos"].map(x => <option key={x}>{x}</option>)}</select></Campo>
+      <Campo l="¿De dónde sale el dinero?"><div className="fila" style={{ gap: 4 }}><button type="button" className={"btn chico " + (origen === "mios" ? "" : "suave")} onClick={() => setOrigen("mios")}>De mis fondos de la empresa</button><button type="button" className={"btn chico " + (origen === "inversores" ? "" : "suave")} onClick={() => setOrigen("inversores")}>De inversores o de los ingresos del mes</button></div></Campo>
+      {origen === "mios" && <Campo l="¿De cuál de mis fondos?"><select value={f.pagado_desde} onChange={e => setF({ ...f, pagado_desde: e.target.value })}>{[...FONDOS, "Fuera de los fondos"].map(x => <option key={x}>{x}</option>)}</select></Campo>}
+      {origen === "inversores" && <>{proyectos.length > 1 && <Campo l="Proyecto"><select value={proyEf} onChange={e => { setProyG(e.target.value); setFuente(SIN_FUENTE); }}>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></Campo>}
+        <FuenteDinero proyectoId={proyEf} zonaLibre valor={fuente} onChange={setFuente} monto={n(f.monto)} fecha={f.fecha} permitirNo={false} /></>}
       <Campo l="Comprobante (opcional)"><input type="file" key={String(ok)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo>
       <Campo l="Nota"><input value={f.nota} onChange={e => setF({ ...f, nota: e.target.value })} /></Campo>
-    </div><button className="btn" disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Registrar gasto"}</button><p className="mute">Si eliges un fondo (por ejemplo Caja chica), el gasto se descuenta de ese fondo solo.</p></div>
+    </div><button className="btn" disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Registrar gasto"}</button><p className="mute">Si eliges un fondo (por ejemplo Caja chica, el fondo de inversores o los ingresos del mes), el gasto se descuenta de ese saldo solo. Si el dinero es de un inversor que no está registrado, puedes anotarlo en el momento.</p></div>
     {Object.keys(porCat).length > 0 && <div className="card"><h2>Por categoría</h2><div className="fila">{Object.entries(porCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => <span key={k} className="tag">{k}: {bs(v)}</span>)}</div></div>}
     <div className="card tw"><h2>Gastos</h2>{gastos.loading ? <Cargando /> : G.length ? <table><thead><tr><th>Fecha</th><th>Categoría</th><th>Concepto</th><th>Monto</th><th>Salió de</th><th /></tr></thead>
-      <tbody>{G.map(g => <tr key={g.id}><td>{g.fecha}</td><td>{g.categoria}</td><td>{g.concepto}{g.nota && <><br /><span className="mute">{g.nota}</span></>}</td><td><b>{bs(g.monto)}</b></td><td>{g.pagado_desde}</td>
+      <tbody>{G.map(g => <tr key={g.id}><td>{g.fecha}</td><td>{g.categoria}</td><td>{g.concepto}{g.nota && <><br /><span className="mute">{g.nota}</span></>}</td><td><b>{bs(g.monto)}</b></td><td>{g.fuente ? rotuloFuente(g.fuente, g.fuente_detalle) : g.pagado_desde}</td>
         <td><div className="fila">{g.comprobante_path && <button className="btn suave chico" onClick={() => ver(g.comprobante_path)}>Ver comprobante</button>}<button className="btn suave chico" onClick={() => quitar(g)}>A la papelera</button></div></td></tr>)}</tbody></table> : <Vacio>No hay gastos de la empresa en este período.</Vacio>}</div>
   </>;
 }

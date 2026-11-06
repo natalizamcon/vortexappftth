@@ -1,7 +1,7 @@
 /** Permisos por módulo. El administrador siempre puede todo; los demás roles usan lo que el administrador marcó en Configuración → Roles y permisos. */
 export type Accion = "ver" | "crear" | "editar" | "eliminar";
 export const ACCIONES: [Accion, string][] = [["ver", "Ver"], ["crear", "Crear"], ["editar", "Editar"], ["eliminar", "Eliminar"]];
-export const MODULOS: [string, string][] = [["clientes", "Clientes"], ["cobranzas", "Cobranzas"], ["pagos", "Pagos"], ["red", "Red y NAP"], ["instalaciones", "Instalaciones"], ["inventario", "Inventario"], ["finanzas", "Finanzas"], ["reportes", "Reportes"], ["formularios", "Formularios"], ["usuarios", "Usuarios"]];
+export const MODULOS: [string, string][] = [["clientes", "Clientes"], ["cobranzas", "Cobranzas"], ["pagos", "Pagos"], ["red", "Red y NAP"], ["instalaciones", "Instalaciones"], ["inventario", "Almacén"], ["finanzas", "Finanzas"], ["reportes", "Reportes"], ["formularios", "Formularios"], ["usuarios", "Usuarios"]];
 export type Matriz = Record<string, Record<Accion, boolean>>;
 
 const todos = (v: boolean): Record<Accion, boolean> => ({ ver: v, crear: v, editar: v, eliminar: v });

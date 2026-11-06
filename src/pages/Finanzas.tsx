@@ -20,7 +20,7 @@ export default function Finanzas() {
   const socio = perfil?.rol === "socio", par = (x: [string, string][], si: boolean) => (si ? x : []);
   const carpetas: [string, string, [string, string][]][] = [
     ["panel", "Panel", [["rent", "Rentabilidad"], ["mov", "Ingresos y gastos"]]],
-    ["inv", "Inversores y fondos", [["inv", "Inversores"], ["fondo", "Fondo de inversión"], ...par([["soc", "Socios"], ["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
+    ["inv", "Inversores y fondos", [["inv", "Inversores"], ["fondo", "Dinero disponible"], ...par([["soc", "Socios"], ["fon", "Caja y fondos"]], admin), ...par([["mi", "Mi reparto"]], socio)]],
     ["sim", "Simulador y presupuesto", [["sim", "Simulador de proyecto"], ["pre", "Presupuesto de la zona"], ["vs", "Presupuesto vs real"]]],
     ["costos", "Costos y compras", [...par([["comp", "Costos compartidos"], ["emp", "Gastos de la empresa"], ["compras", "Compras de la empresa"]], admin), ["per", "Pagos al personal"]]],
   ];

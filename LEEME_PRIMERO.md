@@ -314,3 +314,17 @@ git push origin main
 4. **Límite importante:** funciona **mientras la app esté abierta** (aunque esté en segundo plano). Con la app cerrada o el celular bloqueado el navegador no deja correr nada, así que no puede avisar. Para eso sirve el botón **📅** de cada recordatorio (lo pasa al calendario del celular con alarma). Avisos con la app cerrada requieren "notificaciones push", que es una mejora aparte.
 5. Se actualizó `public/sw.js` (al tocar una notificación abre la Agenda). No hay SQL nuevo.
 
+### Novedades de la 3.18 · Fondo de inversión, inversores editables y de dónde sale el dinero de cada compra
+1. En Supabase → SQL Editor ejecuta **`sql/29_fondo_inversion.sql`** (después del 28; necesita que ya hayas corrido el 23 y el 24). No borra datos.
+2. **Inversores: ahora se puede corregir todo.** Botón **✏️ Editar** en cada inversor: nombre, zona, moneda, monto, tipo de cambio, plazo, fecha, interés (en % o en monto), para qué es y el comprobante (verlo, reemplazarlo o quitarlo).
+3. **Inversores generales:** al anotar un inversor puedes elegir **"General del proyecto (no es de una zona)"**. En la lista se ven con la etiqueta *General*.
+4. **Al crear un proyecto o una zona** puedes anotar sus inversores (en Bs o dólares, con interés y "para qué"): aparecen solos en Finanzas → Inversores. En **+ Nuevo proyecto** entran como inversores generales; en el asistente de **+ Nueva zona**, como inversores de esa zona.
+5. **Fondo de inversión:** el dinero de los inversores de cada zona forma el fondo de esa zona, y el de los inversores generales forma el fondo general del proyecto. Se ve en:
+   - Un **cuadro arriba de Finanzas** (con la zona elegida muestra el fondo de esa zona; sin zona, el total).
+   - **Finanzas → Inversores y fondos → Fondo de inversión:** recibido, gastado y disponible por zona y del fondo general, con cada movimiento y el saldo después de cada uno.
+   - Un indicador **"Disponible en el fondo de inversión"** en la pantalla de Inversores.
+6. **De dónde sale el dinero:** al ingresar material (Inventario), al registrar una compra de la empresa y en Finanzas → Ingresos y gastos aparece **"¿De dónde sale el dinero?"**: fondo de la zona, fondo general, otra fuente (con detalle) o, solo en las compras, "No registrar en finanzas". Si sale de un fondo, **se descuenta solo** y la compra aparece en Finanzas como inversión. Si el fondo no alcanza, **no te deja** (la base de datos también lo impide). Solo lo ve quien maneja finanzas.
+7. El saldo se calcula siempre desde los inversores y los gastos: si corriges el monto de un inversor o mandas un gasto a la papelera, el saldo se corrige solo. No se puede dejar el fondo en negativo.
+8. Límites de esta versión: los intereses que se pagan a inversores generales no se reparten entre zonas en el cálculo de utilidades; y los costos de la pestaña Red y los mantenimientos todavía no preguntan de dónde sale el dinero.
+9. `sql/3_verificar_instalacion.sql` ahora tiene 35 filas en OK.
+

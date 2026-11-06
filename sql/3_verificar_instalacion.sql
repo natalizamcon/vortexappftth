@@ -1,6 +1,6 @@
 -- =====================================================================
 --  VORTEX · REVISAR QUE TODO QUEDÓ BIEN INSTALADO (solo lee, no cambia nada)
---  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 34 filas.
+--  Pégalo en SQL Editor y pulsa Run. Debe salir "OK" en las 35 filas.
 -- =====================================================================
 select n, comprobacion, resultado, estado from (
   select 1 as n, 'Tablas creadas (deben ser 31)' as comprobacion,
@@ -198,4 +198,15 @@ select n, comprobacion, resultado, estado from (
   select 34, 'Historial de la Agenda (archivo 28)',
          (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'agenda_eventos')::text,
          case when (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'agenda_eventos') = 1 then 'OK' else 'FALTA: ejecuta 28_agenda_historial.sql' end
+  union all
+  select 35, 'Fondo de inversión: inversores generales y fuente de cada gasto (archivo 29)',
+         ((select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'fin_movimientos' and column_name in ('fuente','fuente_detalle'))
+          + (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name = 'zona_id' and is_nullable = 'YES')
+          + (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_fondo_inversion')
+          + (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'fondo_saldo'))::text,
+         case when (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'fin_movimientos' and column_name in ('fuente','fuente_detalle')) = 2
+               and (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'inversores' and column_name = 'zona_id' and is_nullable = 'YES') = 1
+               and (select count(*) from information_schema.views where table_schema = 'public' and table_name = 'v_fondo_inversion') = 1
+               and (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname = 'fondo_saldo') = 1
+              then 'OK' else 'FALTA: ejecuta 29_fondo_inversion.sql' end
 ) r order by n;

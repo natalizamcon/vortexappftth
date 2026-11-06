@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { Aviso, Campo, Cargando, Vacio, bs, useQuery } from "../lib/ui";
+import { useApp } from "../lib/auth";
+import { FuenteDinero, FuenteElegida, SIN_FUENTE, precomprobarFuente, registrarGastoFuente } from "../lib/FuenteDinero";
 
 const n = (x: any) => Number(x) || 0;
 export const PROVEEDORES = ["Digicorp", "Entel", "Tigo", "Viva", "Otro"];
@@ -10,16 +12,21 @@ export const totalDe = (S: any[], m: string) => S.filter(x => x.material_id === 
 /** Ingresar material a un almacén con el precio realmente pagado (si hubo descuento, se anota con ese precio). */
 export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo }: { A: any[]; M: any[]; S: any[]; almacenInicial?: string; materialInicial?: string; onListo: () => void }) {
   const [f, setF] = useState({ almacen: almacenInicial || A[0]?.id || "", material: materialInicial || "", cantidad: "1", precio: String(n(M.find(x => x.id === materialInicial)?.costo)), proveedor: "Digicorp" });
-  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [fact, setFact] = useState<File | null>(null);
+  const [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [fact, setFact] = useState<File | null>(null), [fuente, setFuente] = useState<FuenteElegida>(SIN_FUENTE), { puede } = useApp();
   const m = M.find(x => x.id === f.material), antes = m ? totalDe(S, m.id) : 0, cant = n(f.cantidad), precio = n(f.precio);
   const nuevoCosto = m && antes + cant > 0 ? Math.round(((antes * n(m.costo) + cant * precio) / (antes + cant)) * 100) / 100 : precio;
   const elegir = (id: string) => setF(x => ({ ...x, material: id, precio: String(n(M.find(y => y.id === id)?.costo)), proveedor: M.find(y => y.id === id)?.proveedor || x.proveedor }));
   const guardar = async () => {
     setMsg(""); setOk(""); if (!f.almacen) return setMsg("Elige el almacén de destino."); if (!m) return setMsg("Elige el artículo."); if (!(cant > 0)) return setMsg("La cantidad debe ser mayor a 0."); if (f.precio === "" || precio < 0) return setMsg("Escribe el precio unitario pagado (puede ser 0 si fue un regalo).");
+    const total = cant * precio, zonaDest: string | null = A.find((a: any) => a.id === f.almacen)?.zona_id || null, verFuente = puede("finanzas", "crear") && total > 0;
+    if (verFuente && !fuente.fuente) return setMsg("Elige de dónde sale el dinero de esta compra (o \"No registrar en finanzas\").");
+    if (verFuente) { const e = await precomprobarFuente(fuente, total, m.proyecto_id, zonaDest); if (e) return setMsg(e); }
     setOcup(true);
     let ruta: string | null = null; try { if (fact) ruta = await subirArchivo("comprobantes", m.proyecto_id, fact); } catch (e: any) { setOcup(false); return setMsg(e.message); }
     const { error } = await supabase.rpc("registrar_compra", { p_material: m.id, p_almacen: f.almacen, p_cantidad: cant, p_precio: precio, p_proveedor: f.proveedor || null, p_ref: null, p_factura: ruta }); setOcup(false);
-    if (error) return setMsg(error.message); setOk(`Ingresaron ${cant} ${m.unidad} de ${m.nombre} a ${precio ? bs(precio) : "precio 0"} cada una${ruta ? ", con su factura" : ""}.`); setF({ ...f, cantidad: "1" }); setFact(null); onListo();
+    if (error) return setMsg(error.message);
+    let fin = ""; if (verFuente) { const e2 = await registrarGastoFuente({ proyecto_id: m.proyecto_id, zona_id: zonaDest, categoria: m.categoria || "Materiales y equipos", descripcion: `Compra de ${cant} ${m.unidad} de ${m.nombre}`, monto: total, fuente, comprobante_path: ruta }); fin = e2 ? ` ⚠ Entró al inventario, pero no se pudo registrar en finanzas: ${e2} Regístralo en Finanzas → Ingresos y gastos.` : fuente.fuente === "NO" ? "" : ` Registrado en Finanzas (${fuente.fuente === "Otra fuente" ? "otra fuente" : fuente.fuente.toLowerCase()}).`; }
+    setOk(`Ingresaron ${cant} ${m.unidad} de ${m.nombre} a ${precio ? bs(precio) : "precio 0"} cada una${ruta ? ", con su factura" : ""}.${fin}`); setF({ ...f, cantidad: "1" }); setFact(null); setFuente(SIN_FUENTE); onListo();
   };
   return <div className="card"><h2>Ingresar material a un almacén</h2>{msg && <Aviso tipo="mal">{msg}</Aviso>}{ok && <Aviso tipo="ok">{ok}</Aviso>}
     <div className="form" style={{ gridTemplateColumns: "1fr" }}>
@@ -28,6 +35,7 @@ export function FormIngreso({ A, M, S, almacenInicial, materialInicial, onListo 
       <Campo l="Cantidad"><input type="number" min={0} step="any" value={f.cantidad} onChange={e => setF({ ...f, cantidad: e.target.value })} /></Campo>
       <Campo l="Precio unitario pagado (Bs)"><input type="number" min={0} step={0.01} value={f.precio} onChange={e => setF({ ...f, precio: e.target.value })} /></Campo>
       <Campo l="Factura (foto o PDF, opcional)"><input type="file" accept="image/*,.pdf" key={String(ok)} onChange={e => setFact(e.target.files?.[0] || null)} /></Campo>
+      {puede("finanzas", "crear") && cant * precio > 0 && m && <FuenteDinero proyectoId={m.proyecto_id} zonaId={A.find((a: any) => a.id === f.almacen)?.zona_id || null} valor={fuente} onChange={setFuente} monto={cant * precio} />}
       <Campo l="Proveedor"><input list="prov-inv" value={f.proveedor} onChange={e => setF({ ...f, proveedor: e.target.value })} /><datalist id="prov-inv">{PROVEEDORES.map(p => <option key={p} value={p} />)}</datalist></Campo></div>
     {m && cant > 0 && <p className="mute" style={{ margin: "8px 0 0" }}>Total de la compra: <b>{bs(cant * precio)}</b>. {n(m.costo) !== precio && antes > 0 ? <>El costo promedio del artículo pasa de {bs(m.costo)} a <b>{bs(nuevoCosto)}</b>.</> : null}{antes === 0 && n(m.costo) !== precio ? <>El costo del artículo pasa a <b>{bs(precio)}</b>.</> : null}</p>}
     <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={ocup} onClick={guardar}>{ocup ? "Ingresando…" : "Ingresar al almacén"}</button>

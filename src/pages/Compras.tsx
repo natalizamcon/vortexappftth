@@ -3,6 +3,7 @@ import { supabase, subirArchivo, urlArchivo } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { aPapelera } from "../lib/papelera";
 import { Aviso, Campo, Cargando, Kpi, Vacio, bs, hoy, useQuery } from "../lib/ui";
+import { FuenteDinero, FuenteElegida, SIN_FUENTE, precomprobarFuente, registrarGastoFuente } from "../lib/FuenteDinero";
 
 const n = (x: any) => Number(x) || 0;
 const CATEGORIAS = ["Herramienta", "Equipo de medición", "Vehículo", "Mobiliario", "Otros"];
@@ -11,13 +12,13 @@ const orden = (a: any) => (a.tipo === "central" ? 0 : a.tipo === "zona" ? 1 : 2)
 
 /** Herramientas y equipos de la empresa (fusionadora, escaleras, medidores…). Todo lo que se registra aquí entra también al inventario del proyecto, en el almacén que elijas. */
 export default function Compras() {
-  const { proyectos, proyectoId } = useApp();
+  const { proyectos, proyectoId, puede } = useApp();
   const lista = useQuery(() => supabase.from("compras_empresa").select("*").order("fecha", { ascending: false }).order("creado_en", { ascending: false }).limit(1000), []);
-  const alm = useQuery(() => supabase.from("almacenes").select("id, nombre, tipo, proyecto_id").order("nombre"), []);
+  const alm = useQuery(() => supabase.from("almacenes").select("id, nombre, tipo, proyecto_id, zona_id").order("nombre"), []);
   const proyDef = proyectoId || proyectos.find(p => p.nombre === "Vortex")?.id || proyectos[0]?.id || "";
   const A: any[] = (alm.data as any[]) || [], almDe = (pid: string) => A.filter(a => a.proyecto_id === pid).sort((a, b) => orden(a) - orden(b) || a.nombre.localeCompare(b.nombre));
   const vacio = { articulo: "", categoria: "Herramienta", cantidad: "1", costo_unitario: "", fecha: hoy(), proveedor: "", proyecto: proyDef, almacen: "", estado: "En uso" };
-  const [f, setF] = useState(vacio), [arch, setArch] = useState<File | null>(null), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false);
+  const [f, setF] = useState(vacio), [arch, setArch] = useState<File | null>(null), [msg, setMsg] = useState(""), [ok, setOk] = useState(""), [ocup, setOcup] = useState(false), [fuente, setFuente] = useState<FuenteElegida>(SIN_FUENTE);
   const L: any[] = (lista.data as any[]) || [], total = L.reduce((s, x) => s + n(x.cantidad) * n(x.costo_unitario), 0), piezas = L.reduce((s, x) => s + n(x.cantidad), 0);
   const proy = f.proyecto || proyDef, opciones = almDe(proy), almSel = f.almacen || opciones.find(a => a.tipo === "central")?.id || "";
   const nombreProy = (id: string) => proyectos.find(p => p.id === id)?.nombre || "";
@@ -27,12 +28,16 @@ export default function Compras() {
     if (!f.articulo.trim()) return setMsg("Escribe el nombre del artículo.");
     if (n(f.cantidad) < 1) return setMsg("La cantidad debe ser 1 o más.");
     if (!proy) return setMsg("Primero crea un proyecto (Configuración → Socios y proyectos).");
+    const totalC = Math.round(n(f.cantidad)) * n(f.costo_unitario), zonaC: string | null = opciones.find(a => a.id === almSel)?.zona_id || null, verFuente = puede("finanzas", "crear") && totalC > 0;
+    if (verFuente && !fuente.fuente) return setMsg("Elige de dónde sale el dinero de esta compra (o \"No registrar en finanzas\").");
+    if (verFuente) { const e = await precomprobarFuente(fuente, totalC, proy, zonaC); if (e) return setMsg(e); }
     setOcup(true);
     try {
       const foto = arch ? await subirArchivo("comprobantes", "empresa", arch) : null;
       const { error } = await supabase.rpc("registrar_compra_empresa", { p: { articulo: f.articulo.trim(), categoria: f.categoria.trim() || "Otros", cantidad: Math.round(n(f.cantidad)), costo_unitario: n(f.costo_unitario), fecha: f.fecha, proveedor: f.proveedor || null, estado: f.estado, foto_path: foto, proyecto_id: proy, almacen_id: almSel || null } });
       if (error) throw new Error(error.message);
-      setOk(`Compra guardada y agregada al inventario (${opciones.find(a => a.id === almSel)?.nombre || "almacén central"}).`); setF({ ...vacio, categoria: f.categoria, proyecto: f.proyecto, almacen: f.almacen }); setArch(null); lista.recargar();
+      let fin = ""; if (verFuente) { const e2 = await registrarGastoFuente({ proyecto_id: proy, zona_id: zonaC, categoria: "Herramientas y equipos", descripcion: `Compra de ${Math.round(n(f.cantidad))} × ${f.articulo.trim()}`, monto: totalC, fuente, comprobante_path: foto }); fin = e2 ? ` ⚠ La compra se guardó, pero no se pudo registrar en finanzas: ${e2} Regístrala en Finanzas → Ingresos y gastos.` : fuente.fuente === "NO" ? "" : ` Registrada en Finanzas (${fuente.fuente === "Otra fuente" ? "otra fuente" : fuente.fuente.toLowerCase()}).`; }
+      setOk(`Compra guardada y agregada al inventario (${opciones.find(a => a.id === almSel)?.nombre || "almacén central"}).${fin}`); setF({ ...vacio, categoria: f.categoria, proyecto: f.proyecto, almacen: f.almacen }); setFuente(SIN_FUENTE); setArch(null); lista.recargar();
     } catch (e: any) { setMsg(e.message); }
     setOcup(false);
   };
@@ -56,6 +61,7 @@ export default function Compras() {
         <Campo l="Proveedor"><input value={f.proveedor} onChange={e => setF({ ...f, proveedor: e.target.value })} /></Campo>
         {proyectos.length > 1 && <Campo l="Proyecto (de su inventario)"><select value={proy} onChange={e => setF({ ...f, proyecto: e.target.value, almacen: "" })}>{proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></Campo>}
         <Campo l="Almacén donde queda (o quién lo tiene)"><select value={almSel} onChange={e => setF({ ...f, almacen: e.target.value })}>{opciones.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></Campo>
+        {puede("finanzas", "crear") && n(f.cantidad) * n(f.costo_unitario) > 0 && <FuenteDinero proyectoId={proy} zonaId={opciones.find(a => a.id === almSel)?.zona_id || null} valor={fuente} onChange={setFuente} monto={Math.round(n(f.cantidad)) * n(f.costo_unitario)} />}
         <Campo l="Estado"><select value={f.estado} onChange={e => setF({ ...f, estado: e.target.value })}>{ESTADOS.map(u => <option key={u}>{u}</option>)}</select></Campo>
         <Campo l="Factura o foto"><input type="file" key={String(ok)} onChange={e => setArch(e.target.files?.[0] || null)} /></Campo>
       </div><button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={ocup} onClick={guardar}>{ocup ? "Guardando…" : "Guardar compra"}</button></div>

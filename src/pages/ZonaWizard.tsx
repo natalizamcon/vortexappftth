@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FilasInversores, InvFila, aInversorDB, capitalTotal } from "../lib/FilasInversores";
 import { supabase } from "../lib/supabase";
 import { useApp } from "../lib/auth";
 import { Aviso, Campo, Cargando, Modal, Vacio, bs, hoy, useQuery } from "../lib/ui";
@@ -6,14 +7,13 @@ import { Aviso, Campo, Cargando, Modal, Vacio, bs, hoy, useQuery } from "../lib/
 const n = (x: any) => Number(x) || 0;
 const PASOS = ["Datos de la zona", "Socios", "Inversores", "Planes y precios", "Red inicial", "Costos fijos", "Meta", "Revisar y crear"];
 
-type Inv = { id: number; nombre: string; monto: any; interes: any; periodo_interes: string; plazo_meses: any };
 type Plan = { id: number; nombre: string; mbps: any; precio: any };
 type Costo = { id: number; concepto: string; cantidad: any; monto_unitario: any };
 
 const inicial = (proyecto: string) => ({
   nombre: "", ubicacion: "", fecha_inicio: hoy(), dia_corte: 5,
   con_socios: false, socios: [] as string[], proyecto_id: proyecto,
-  inversores: [] as Inv[],
+  inversores: [] as InvFila[],
   planes: [{ id: 1, nombre: "Básico", mbps: 50, precio: 90 }, { id: 2, nombre: "Medio", mbps: 100, precio: 140 }, { id: 3, nombre: "Premium", mbps: 200, precio: 200 }] as Plan[],
   nap_si: true, nap_codigo: "NAP-01", nap_puertos: 16,
   costos: [] as Costo[],
@@ -38,7 +38,7 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
       if (!f.nombre.trim()) return "Escribe el nombre de la zona.";
       const d = n(f.dia_corte); if (d < 1 || d > 28) return "El día de corte debe estar entre 1 y 28.";
     }
-    if (paso === 2) { const mal = f.inversores.find(i => !i.nombre.trim() || !(n(i.monto) > 0)); if (mal) return "Cada inversor necesita nombre y un monto mayor a 0 (o quítalo)."; }
+    if (paso === 2) { for (const x of f.inversores) { const r = aInversorDB(x); if ("error" in r) return r.error + " (o quita esa fila)."; } }
     if (paso === 3) { if (!f.planes.length) return "Deja al menos un plan."; if (f.planes.some(p => !p.nombre.trim() || !(n(p.mbps) > 0))) return "Cada plan necesita nombre y velocidad (Mbps)."; }
     if (paso === 4 && f.nap_si) { if (!f.nap_codigo.trim()) return "Escribe el código de la NAP (por ejemplo NAP-01)."; if (n(f.nap_puertos) < 1 || n(f.nap_puertos) > 128) return "Los puertos van de 1 a 128."; }
     return "";
@@ -51,7 +51,7 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
       const payload = {
         nombre: f.nombre.trim(), ubicacion: f.ubicacion, fecha_inicio: f.fecha_inicio, dia_corte: n(f.dia_corte),
         con_socios: f.con_socios, socios: f.con_socios ? f.socios : [], proyecto_id: f.proyecto_id || null,
-        inversores: f.inversores.filter(i => i.nombre.trim() && n(i.monto) > 0).map(i => ({ nombre: i.nombre, monto: n(i.monto), interes: n(i.interes), periodo_interes: i.periodo_interes, plazo_meses: n(i.plazo_meses) || 12 })),
+        inversores: f.inversores.filter(i => i.nombre.trim() || n(i.cap) > 0).map(i => { const r = aInversorDB(i); return "fila" in r ? r.fila : null; }).filter(Boolean),
         planes: f.planes.map(p => ({ nombre: p.nombre, mbps: n(p.mbps), precio: n(p.precio) })),
         nap: f.nap_si ? { codigo: f.nap_codigo, puertos: n(f.nap_puertos) } : null,
         costos: f.costos.filter(c => c.concepto.trim()).map(c => ({ concepto: c.concepto, cantidad: n(c.cantidad) || 1, monto_unitario: n(c.monto_unitario) })),
@@ -68,9 +68,8 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
     setOcup(false);
   };
 
-  const totalInv = f.inversores.reduce((a, i) => a + n(i.monto), 0);
+  const totalInv = capitalTotal(f.inversores);
   const fechaMeta = n(f.meta_meses) > 0 ? sumaMeses(f.fecha_inicio, n(f.meta_meses)) : "";
-  const upI = (id: number, k: keyof Inv, v: any) => up("inversores", f.inversores.map(x => x.id === id ? { ...x, [k]: v } : x));
   const upP = (id: number, k: keyof Plan, v: any) => up("planes", f.planes.map(x => x.id === id ? { ...x, [k]: v } : x));
   const upC = (id: number, k: keyof Costo, v: any) => up("costos", f.costos.map(x => x.id === id ? { ...x, [k]: v } : x));
 
@@ -104,16 +103,8 @@ export function ZonaWizard({ onClose }: { onClose: () => void }) {
     </>}
 
     {paso === 2 && <>
-      <Aviso>Anota aquí el dinero que te prestaron o invirtieron para esta zona (capital, interés y plazo). Es un registro de cuentas: <b>no da acceso a la app</b>. Si no tienes inversores, pasa al siguiente paso.</Aviso>
-      <div className="tw"><table><thead><tr><th>Nombre</th><th>Capital (Bs)</th><th>Interés %</th><th>El interés es</th><th>Plazo (meses)</th><th /></tr></thead>
-        <tbody>{f.inversores.map(i => <tr key={i.id}>
-          <td><input value={i.nombre} style={{ width: 150 }} onChange={e => upI(i.id, "nombre", e.target.value)} /></td>
-          <td><Num v={i.monto} ancho={100} set={v => upI(i.id, "monto", v)} /></td>
-          <td><Num v={i.interes} ancho={70} paso={0.1} set={v => upI(i.id, "interes", v)} /></td>
-          <td><select value={i.periodo_interes} onChange={e => upI(i.id, "periodo_interes", e.target.value)}><option value="mensual">por mes</option><option value="anual">por año</option></select></td>
-          <td><Num v={i.plazo_meses} ancho={70} set={v => upI(i.id, "plazo_meses", v)} /></td>
-          <td><button className="btn suave chico" onClick={() => up("inversores", f.inversores.filter(x => x.id !== i.id))}>Quitar</button></td></tr>)}</tbody></table></div>
-      <div className="fila" style={{ marginTop: 8 }}><button className="btn suave" onClick={() => up("inversores", [...f.inversores, { id: sigId(f.inversores), nombre: "", monto: "", interes: 0, periodo_interes: "mensual", plazo_meses: 12 }])}>+ Agregar inversor</button>{totalInv > 0 && <span className="mute">Capital total: <b>{bs(totalInv)}</b></span>}</div>
+      <Aviso>Anota aquí el dinero que te prestaron o invirtieron para esta zona (en Bs o en dólares, interés y plazo). Es un registro de cuentas: <b>no da acceso a la app</b>. <b>Aparece solo en Finanzas → Inversores</b> y suma al <b>fondo de inversión</b> de esta zona, para ir descontando de ahí las compras. Si no tienes inversores, pasa al siguiente paso.</Aviso>
+      <FilasInversores filas={f.inversores} onChange={v => up("inversores", v)} />
     </>}
 
     {paso === 3 && <>
